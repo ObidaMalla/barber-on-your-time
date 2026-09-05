@@ -1,0 +1,598 @@
+# ملخص شامل - رحلة التعلم والمشاريع
+
+---
+
+## الجزء الأول: نشر مشروع TaskFlow على Render (تعلمناه)
+
+### ✅ خطوات النشر الكاملة
+
+1. **تجهيز الكود قبل الرفع**
+   - تأكد من سطر `start` صحيح بـ `package.json`: `"start": "node src/app.js"`
+   - البورت ماخوذ من البيئة: `const PORT = process.env.PORT || 3000;`
+   - `.env` مذكور بـ `.gitignore`
+
+2. **إنشاء حساب على Render** (عن طريق GitHub)
+
+3. **إنشاء قاعدة بيانات PostgreSQL على Render**
+   - New → PostgreSQL → اسم + Region + Plan Free
+   - نسخ **Internal Database URL**
+
+4. **إنشاء Web Service للباك إند**
+   - Build Command: `npm install && npx prisma generate && npx prisma migrate deploy`
+   - Start Command: `npm start`
+   - Instance Type: Free
+
+5. **إضافة Environment Variables**
+   - `DATABASE_URL` = Internal Database URL
+   - باقي المتغيرات (JWT_SECRET، إلخ) - بدون `PORT` وبدون `DB_HOST/PORT/USER/PASSWORD/NAME`
+   - `NODE_ENV=production`
+
+6. **مراقبة الـ Logs لحد ما تصير الحالة "Live"**
+
+### 📌 دروس ومشاكل واجهناها (مهم تتذكرها)
+
+| المشكلة | السبب | الحل |
+|---|---|---|
+| `Application exited early` | سطر `start` بيشاور على ملف غير موجود | تصحيح المسار بـ `package.json` |
+| بيانات قديمة مش موجودة على Render | القاعدة المحلية والقاعدة على Render **منفصلتين تماماً** | لازم نقل يدوي إذا بدنا البيانات |
+| فشل الاتصال بـ pgAdmin/Prisma Studio من الجهاز (`timeout`) | الشبكة/الراوتر عم يحظر بورت 5432 | جرب شبكة تانية (Hotspot) |
+| Shell مو متوفر على الخطة المجانية | قيود Render | استخدام pgAdmin بدل الـ Shell |
+
+### 📌 ملاحظات دائمة لازم تحفظها
+
+- الباك إند المجاني بينام بعد 15 دقيقة عدم استخدام (أول طلب بياخد ~30-60 ثانية)
+- قاعدة البيانات المجانية إلها تاريخ انتهاء (~شهر)، تحتاج تجديد
+- Internal URL بين خدمات Render، External URL للاتصال من جهازك
+- Auto-Deploy: أي `git push` عالـ main بيعمل نشر جديد تلقائياً
+
+---
+
+## الجزء الثاني: مشروع BarberOnYourTime (المشروع الجديد)
+
+### 🎯 فكرة المشروع
+تطبيق حجز مواعيد لصالونات الحلاقة، بنظام "تحويل تلقائي" - لو حلاق رفض الطلب، بينتقل تلقائياً لحلاق تاني متوفر بنفس الوقت.
+
+### 👥 أنواع المستخدمين
+- **Owner (صاحب المحل)**: يضيف حلاقين، يحدد خدمات، يشوف كل الحجوزات، يتدخل لو كل الحلاقين رفضوا
+- **Staff (حلاق)**: يحدد جدول دوامه، يشوف حجوزاته، يقبل/يرفض
+- **Customer (عميل)**: يحجز خدمة مع حلاق معين بوقت محدد
+
+### 🔄 دورة حياة الحجز
+1. العميل يختار: خدمة + حلاق معين + وقت → الحالة: **PENDING**
+2. الحلاق يوافق → **CONFIRMED** + إشعار للعميل
+3. الحلاق يرفض → ينتقل تلقائياً لأقرب حلاق متوفر بنفس الوقت
+4. لو كل الحلاقين رفضوا → **NEEDS_OWNER** + إشعار لصاحب المحل
+
+### 🗄️ الجداول (Database Schema) - ✅ مكتملة
+
+1. **User**: id, name, email, password, role (OWNER/STAFF/CUSTOMER)
+2. **Business**: id, name, address, ownerId
+3. **Staff**: id, userId, businessId
+4. **Service**: id, name, durationMinutes, price, businessId
+5. **Booking**: id, startTime, status, customerId, serviceId, staffId
+6. **BookingAttempt**: id, order, status, bookingId, staffId
+7. **Availability**: id, dayOfWeek, startTime, endTime, staffId
+
+### ✅ ما تم إنجازه (الكود)
+
+- [x] إعداد المشروع (npm init + تثبيت المكتبات)
+- [x] إعداد Prisma (schema.prisma + migration أول)
+- [x] هيكلية المجلدات (config, controllers, handlers, jobs, middlewares, routes, services, sockets, utils, validators)
+- [x] `config/prisma.js` - Prisma Client مشترك (Singleton) مع Adapter
+- [x] `utils/ApiError.js`, `utils/ApiResponse.js`, `utils/asyncHandler.js`
+- [x] `handlers/errorHandler.js`, `handlers/successHandler.js`
+- [x] **نظام Auth كامل** (بنمط Service + Controller):
+  - [x] `services/authService.js` (registerUser, loginUser)
+  - [x] `controllers/authController.js` (register, login)
+  - [x] `routes/authRoutes.js` → `/auth/register`, `/auth/login`
+  - [x] اختُبر بنجاح على Postman ✅
+- [x] **middlewares/authMiddleware.js** (`protect`) - التحقق من JWT Token
+- [x] **نظام إنشاء محل** (بنمط Service + Controller):
+  - [x] `services/businessService.js` (createBusinessForUser مع `$transaction`)
+  - [x] `controllers/businessController.js` (createBusiness)
+  - [x] `routes/businessRoutes.js` → `POST /business` (محمي بـ `protect`)
+  - [x] اختُبر بنجاح: إنشاء محل + ترقية تلقائية لـ OWNER ✅
+
+- [x] **نظام إضافة حلاقين بكود دعوة (One-Time Invite Code)**:
+  - [x] جدول جديد `StaffInvite` (code, businessId, used, usedByUserId)
+  - [x] `services/staffInviteService.js` (createStaffInvite, joinBusinessWithCode مع `$transaction` ثلاثي: إنشاء Staff + تحديث الكود لـ used + ترقية اليوزر لـ STAFF)
+  - [x] `controllers/staffInviteController.js` (generateInvite, joinBusiness)
+  - [x] Routes: `POST /business/staff-invites` (توليد كود، owner بس) و `POST /business/join` (استخدام كود، أي مستخدم مسجل)
+  - [x] اختُبر بنجاح: توليد كود → تسجيل حلاق → دخول → استخدام كود → انضم كـ Staff وترقّى تلقائياً من CUSTOMER لـ STAFF ✅
+
+- [x] **نظام إضافة الخدمات (Service)**:
+  - [x] `services/serviceService.js` (createService, getBusinessServices)
+  - [x] `controllers/serviceController.js` (addService, listServices)
+  - [x] Routes: `POST /services` و `GET /services` (owner بس، محمي بـ `protect`)
+  - [x] اختُبر بنجاح: إضافة 3 خدمات وعرضهم ✅
+
+- [x] **نظام تحديد أوقات الدوام (Availability)**:
+  - [x] `services/availabilityService.js` (addAvailability, getMyAvailability)
+  - [x] `controllers/availabilityController.js` (setAvailability, listMyAvailability)
+  - [x] Routes: `POST /availability` و `GET /availability` (staff بس، محمي بـ `protect`)
+  - [x] اختُبر بنجاح: إضافة 3 أيام دوام لـ Ahmad وعرضهم ✅
+
+- [x] **نظام الحجز (Booking) - المرحلة 1: إنشاء حجز**:
+  - [x] `services/bookingService.js` (createBooking + فحص عدم تكرار طلب معلق لنفس الوقت/الحلاق)
+  - [x] `controllers/bookingController.js` (requestBooking)
+  - [x] Routes: `POST /bookings` (محمي بـ `protect`)
+  - [x] 🐛 **إصلاح مهم**: `errorHandler` كان متعلق (Commented) بـ `app.js` من البداية - الأخطاء كانت ترجع كصفحة HTML بدل JSON. تم تفعيله.
+  - [x] اختُبر بنجاح: إنشاء حجز + منع تكرار نفس الطلب (409 Conflict) ✅
+
+### 🔜 الخطوات القادمة (لسا ما بلشناها)
+
+- [ ] نظام الحجز (Booking) - المرحلة 2: قبول/رفض الحلاق + التحويل التلقائي بين الحلاقين
+- [ ] حالة NEEDS_OWNER لما يرفض كل الحلاقين:
+  - [ ] إنشاء حجز جديد من العميل
+  - [ ] منطق "أول محاولة" (BookingAttempt رقم 1)
+  - [ ] قبول/رفض الحلاق للحجز
+  - [ ] منطق التحويل التلقائي لحلاق تاني عند الرفض
+  - [ ] حالة "NEEDS_OWNER" لما يرفض الكل
+- [ ] نظام الإشعارات (Notifications)
+- [ ] لاحقاً: ربط الباك إند بتطبيق Flutter
+- [ ] لاحقاً: نشر المشروع على Render (بنفس الخطوات يلي تعلمناها بالجزء الأول)
+
+---
+
+## 📝 ملاحظات تقنية مهمة تتذكرها
+
+- **نمط الكود المتبع**: Controller خفيف (يتحقق البيانات الأساسية بس) → Service (فيه كل منطق العمل الحقيقي مع Prisma)
+- **الأخطاء**: نستخدم `throw new ApiError(statusCode, message)` بدل `res.status().json()` مباشرة
+- **كل Controller ملفوف بـ `asyncHandler`** حتى نتجنب تكرار try/catch
+- **الردود الناجحة**: عن طريق `successHandler(res, statusCode, message, data)`
+- **JWT**: `expiresIn: "7d"`, بيحمل `{ userId, role }`
+- **حماية Routes**: نستخدم `protect` middleware قبل الـ Controller مباشرة بالـ Route
+- ⚠️ **لا تحدّث Prisma لنسخة 8 (rc)** - لسا تجريبية وغير مستقرة، خليك على `7.9.1`
+
+---
+
+*آخر تحديث: بعد إنجاح اختبار "إنشاء محل" وترقية OWNER على Postman*
+
+
+
+
+
+
+
+
+/*
+
+
+
+
+
+
+
+///////////////////////////////////////////////////
+
+
+
+
+
+///////////////////////////////////
+/
+
+/
+/
+/
+
+
+*/
+تحديث الخطة
+
+# ملخص شامل - رحلة التعلم والمشاريع
+
+---
+
+## الجزء الأول: نشر مشروع TaskFlow على Render (تعلمناه)
+
+### ✅ خطوات النشر الكاملة
+
+1. **تجهيز الكود قبل الرفع**
+   - تأكد من سطر `start` صحيح بـ `package.json`: `"start": "node src/app.js"`
+   - البورت ماخوذ من البيئة: `const PORT = process.env.PORT || 3000;`
+   - `.env` مذكور بـ `.gitignore`
+
+2. **إنشاء حساب على Render** (عن طريق GitHub)
+
+3. **إنشاء قاعدة بيانات PostgreSQL على Render**
+   - New → PostgreSQL → اسم + Region + Plan Free
+   - نسخ **Internal Database URL**
+
+4. **إنشاء Web Service للباك إند**
+   - Build Command: `npm install && npx prisma generate && npx prisma migrate deploy`
+   - Start Command: `npm start`
+   - Instance Type: Free
+
+5. **إضافة Environment Variables**
+   - `DATABASE_URL` = Internal Database URL
+   - باقي المتغيرات (JWT_SECRET، إلخ) - بدون `PORT` وبدون `DB_HOST/PORT/USER/PASSWORD/NAME`
+   - `NODE_ENV=production`
+
+6. **مراقبة الـ Logs لحد ما تصير الحالة "Live"**
+
+### 📌 دروس ومشاكل واجهناها (مهم تتذكرها)
+
+| المشكلة | السبب | الحل |
+|---|---|---|
+| `Application exited early` | سطر `start` بيشاور على ملف غير موجود | تصحيح المسار بـ `package.json` |
+| بيانات قديمة مش موجودة على Render | القاعدة المحلية والقاعدة على Render **منفصلتين تماماً** | لازم نقل يدوي إذا بدنا البيانات |
+| فشل الاتصال بـ pgAdmin/Prisma Studio من الجهاز (`timeout`) | الشبكة/الراوتر عم يحظر بورت 5432 | جرب شبكة تانية (Hotspot) |
+| Shell مو متوفر على الخطة المجانية | قيود Render | استخدام pgAdmin بدل الـ Shell |
+
+### 📌 ملاحظات دائمة لازم تحفظها
+
+- الباك إند المجاني بينام بعد 15 دقيقة عدم استخدام (أول طلب بياخد ~30-60 ثانية)
+- قاعدة البيانات المجانية إلها تاريخ انتهاء (~شهر)، تحتاج تجديد
+- Internal URL بين خدمات Render، External URL للاتصال من جهازك
+- Auto-Deploy: أي `git push` عالـ main بيعمل نشر جديد تلقائياً
+
+---
+
+## الجزء الثاني: مشروع BarberOnYourTime (المشروع الجديد)
+
+### 🎯 فكرة المشروع
+تطبيق حجز مواعيد لصالونات الحلاقة، بنظام "تحويل تلقائي" - لو حلاق رفض الطلب، بينتقل تلقائياً لحلاق تاني متوفر بنفس الوقت.
+
+### 👥 أنواع المستخدمين
+- **Owner (صاحب المحل)**: يضيف حلاقين، يحدد خدمات، يشوف كل الحجوزات، يتدخل لو كل الحلاقين رفضوا
+- **Staff (حلاق)**: يحدد جدول دوامه، يشوف حجوزاته، يقبل/يرفض
+- **Customer (عميل)**: يحجز خدمة مع حلاق معين بوقت محدد
+
+### 🔄 دورة حياة الحجز
+1. العميل يختار: خدمة + حلاق معين + وقت → الحالة: **PENDING**
+2. الحلاق يوافق → **CONFIRMED** + إشعار للعميل
+3. الحلاق يرفض → ينتقل تلقائياً لأقرب حلاق متوفر بنفس الوقت
+4. لو كل الحلاقين رفضوا → **NEEDS_OWNER** + إشعار لصاحب المحل
+
+### 🗄️ الجداول (Database Schema) - ✅ مكتملة
+
+1. **User**: id, name, email, password, role (OWNER/STAFF/CUSTOMER)
+2. **Business**: id, name, address, ownerId
+3. **Staff**: id, userId, businessId
+4. **Service**: id, name, durationMinutes, price, businessId
+5. **Booking**: id, startTime, status, customerId, serviceId, staffId
+6. **BookingAttempt**: id, order, status, bookingId, staffId
+7. **Availability**: id, dayOfWeek, startTime, endTime, staffId
+
+### ✅ ما تم إنجازه (الكود)
+
+- [x] إعداد المشروع (npm init + تثبيت المكتبات)
+- [x] إعداد Prisma (schema.prisma + migration أول)
+- [x] هيكلية المجلدات (config, controllers, handlers, jobs, middlewares, routes, services, sockets, utils, validators)
+- [x] `config/prisma.js` - Prisma Client مشترك (Singleton) مع Adapter
+- [x] `utils/ApiError.js`, `utils/ApiResponse.js`, `utils/asyncHandler.js`
+- [x] `handlers/errorHandler.js`, `handlers/successHandler.js`
+- [x] **نظام Auth كامل** (بنمط Service + Controller):
+  - [x] `services/authService.js` (registerUser, loginUser)
+  - [x] `controllers/authController.js` (register, login)
+  - [x] `routes/authRoutes.js` → `/auth/register`, `/auth/login`
+  - [x] اختُبر بنجاح على Postman ✅
+- [x] **middlewares/authMiddleware.js** (`protect`) - التحقق من JWT Token
+- [x] **نظام إنشاء محل** (بنمط Service + Controller):
+  - [x] `services/businessService.js` (createBusinessForUser مع `$transaction`)
+  - [x] `controllers/businessController.js` (createBusiness)
+  - [x] `routes/businessRoutes.js` → `POST /business` (محمي بـ `protect`)
+  - [x] اختُبر بنجاح: إنشاء محل + ترقية تلقائية لـ OWNER ✅
+
+- [x] **نظام إضافة حلاقين بكود دعوة (One-Time Invite Code)**:
+  - [x] جدول جديد `StaffInvite` (code, businessId, used, usedByUserId)
+  - [x] `services/staffInviteService.js` (createStaffInvite, joinBusinessWithCode مع `$transaction` ثلاثي: إنشاء Staff + تحديث الكود لـ used + ترقية اليوزر لـ STAFF)
+  - [x] `controllers/staffInviteController.js` (generateInvite, joinBusiness)
+  - [x] Routes: `POST /business/staff-invites` (توليد كود، owner بس) و `POST /business/join` (استخدام كود، أي مستخدم مسجل)
+  - [x] اختُبر بنجاح: توليد كود → تسجيل حلاق → دخول → استخدام كود → انضم كـ Staff وترقّى تلقائياً من CUSTOMER لـ STAFF ✅
+
+- [x] **نظام إضافة الخدمات (Service)**:
+  - [x] `services/serviceService.js` (createService, getBusinessServices)
+  - [x] `controllers/serviceController.js` (addService, listServices)
+  - [x] Routes: `POST /services` و `GET /services` (owner بس، محمي بـ `protect`)
+  - [x] اختُبر بنجاح: إضافة 3 خدمات وعرضهم ✅
+
+- [x] **نظام تحديد أوقات الدوام (Availability)**:
+  - [x] `services/availabilityService.js` (addAvailability, getMyAvailability)
+  - [x] `controllers/availabilityController.js` (setAvailability, listMyAvailability)
+  - [x] Routes: `POST /availability` و `GET /availability` (staff بس، محمي بـ `protect`)
+  - [x] اختُبر بنجاح: إضافة 3 أيام دوام لـ Ahmad وعرضهم ✅
+
+- [x] **نظام الحجز (Booking) - المرحلة 1: إنشاء حجز**:
+  - [x] `services/bookingService.js` (createBooking + فحص عدم تكرار طلب معلق لنفس الوقت/الحلاق)
+  - [x] `controllers/bookingController.js` (requestBooking)
+  - [x] Routes: `POST /bookings` (محمي بـ `protect`)
+  - [x] 🐛 **إصلاح مهم**: `errorHandler` كان متعلق (Commented) بـ `app.js` من البداية - الأخطاء كانت ترجع كصفحة HTML بدل JSON. تم تفعيله.
+  - [x] اختُبر بنجاح: إنشاء حجز + منع تكرار نفس الطلب (409 Conflict) ✅
+
+- [x] **نظام الحجز (Booking) - المرحلة 2: التحويل التلقائي بين الحلاقين** 🎯:
+  - [x] دالة `findAvailableStaff` - تدور على حلاق بديل (يتحقق من Availability + عدم تعارض مع حجز CONFIRMED آخر)
+  - [x] دالة `respondToBooking` (ACCEPT/REJECT) - عند الرفض: تسجل REJECTED، تدور على حلاق بديل، تنقل الحجز إله (BookingAttempt جديدة + تحديث staffId) أو NEEDS_OWNER لو محدا متوفر
+  - [x] Routes: `PATCH /bookings/:bookingId/respond`
+  - [x] 🐛 **إصلاح مهم**: ثغرة أمان - كان ممكن OWNER يصير STAFF (وبالعكس) عن طريق استخدام كود دعوة أو إنشاء محل بدون فحص الـ role الحالي. تم إضافة فحوصات حماية بـ `createBusinessForUser` و `joinBusinessWithCode`
+  - [x] اختُبر بنجاح **سيناريو كامل**: محل + حلاقين (Ahmad, Khaled) بنفس الدوام → عميل حجز مع Ahmad → Ahmad رفض → تحويل تلقائي لـ Khaled → Khaled وافق → الحجز صار CONFIRMED ✅✅✅
+
+### 🔜 الخطوات القادمة (خطة مفصلة، بالترتيب)
+
+**1. Profile (لكل المستخدمين)**
+- [ ] `GET /users/me` - عرض بياناتي
+- [ ] `PATCH /users/me` - تعديل الاسم/الإيميل
+- [ ] `PATCH /users/me/password` - تعديل الباسورد (لازم يدخل الباسورد القديم كتأكيد)
+
+**2. طرد موظف (Owner)**
+- [ ] `DELETE /business/staff/:staffId` - حذف سجل Staff
+- [ ] حجوزات PENDING تبعه وقت الطرد → تتحول تلقائياً لحلاق تاني متوفر (نفس منطق `findAvailableStaff` بالرفض)
+- [ ] role يرجع لـ CUSTOMER بعد الطرد
+
+**3. الخدمات CRUD**
+- [ ] `PATCH /services/:id` - تعديل خدمة
+- [ ] `DELETE /services/:id` - حذف خدمة
+
+**4. تعديل الدوام بموافقة المدير**
+- [ ] جدول جديد `AvailabilityChangeRequest` (staffId, dayOfWeek, startTime, endTime, status)
+- [ ] `POST /availability/request-change` - الحلاق يطلب تعديل
+- [ ] `GET /availability/requests` - صاحب المحل يشوف الطلبات المعلقة
+- [ ] `PATCH /availability/requests/:id` - يوافق/يرفض (لو وافق، ينفّذ التعديل فعلياً على Availability)
+
+**5. إلغاء حجز (Customer)**
+- [ ] `DELETE /bookings/:id` - العميل يلغي حجزه (بس إلغاء، بدون تعديل وقت)
+- [ ] `GET /bookings/mine` - العميل يشوف حجوزاته
+
+**6. Logout**
+- [ ] بسيط - بدون Endpoint، التطبيق (Flutter لاحقاً) بيمسح التوكن المحفوظ عندو محلياً
+
+---
+
+**بعد هاي الست نقاط:**
+- [ ] نظام الإشعارات (Notifications)
+- [ ] لاحقاً: ربط الباك إند بتطبيق Flutter
+- [ ] لاحقاً: نشر المشروع على Render:
+  - [ ] إنشاء حجز جديد من العميل
+  - [ ] منطق "أول محاولة" (BookingAttempt رقم 1)
+  - [ ] قبول/رفض الحلاق للحجز
+  - [ ] منطق التحويل التلقائي لحلاق تاني عند الرفض
+  - [ ] حالة "NEEDS_OWNER" لما يرفض الكل
+- [ ] نظام الإشعارات (Notifications)
+- [ ] لاحقاً: ربط الباك إند بتطبيق Flutter
+- [ ] لاحقاً: نشر المشروع على Render (بنفس الخطوات يلي تعلمناها بالجزء الأول)
+
+---
+
+## 📝 ملاحظات تقنية مهمة تتذكرها
+
+- **نمط الكود المتبع**: Controller خفيف (يتحقق البيانات الأساسية بس) → Service (فيه كل منطق العمل الحقيقي مع Prisma)
+- **الأخطاء**: نستخدم `throw new ApiError(statusCode, message)` بدل `res.status().json()` مباشرة
+- **كل Controller ملفوف بـ `asyncHandler`** حتى نتجنب تكرار try/catch
+- **الردود الناجحة**: عن طريق `successHandler(res, statusCode, message, data)`
+- **JWT**: `expiresIn: "7d"`, بيحمل `{ userId, role }`
+- **حماية Routes**: نستخدم `protect` middleware قبل الـ Controller مباشرة بالـ Route
+- ⚠️ **لا تحدّث Prisma لنسخة 8 (rc)** - لسا تجريبية وغير مستقرة، خليك على `7.9.1`
+
+---
+
+*آخر تحديث: بعد إنجاح اختبار "إنشاء محل" وترقية OWNER على Postman*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////
+////////////////////////
+/////////////////////////
+/////////////////////
+/////////////////////////
+
+
+
+
+# ملخص شامل - رحلة التعلم والمشاريع
+
+---
+
+## الجزء الأول: نشر مشروع TaskFlow على Render (تعلمناه)
+
+### ✅ خطوات النشر الكاملة
+
+1. **تجهيز الكود قبل الرفع**
+   - تأكد من سطر `start` صحيح بـ `package.json`: `"start": "node src/app.js"`
+   - البورت ماخوذ من البيئة: `const PORT = process.env.PORT || 3000;`
+   - `.env` مذكور بـ `.gitignore`
+
+2. **إنشاء حساب على Render** (عن طريق GitHub)
+
+3. **إنشاء قاعدة بيانات PostgreSQL على Render**
+   - New → PostgreSQL → اسم + Region + Plan Free
+   - نسخ **Internal Database URL**
+
+4. **إنشاء Web Service للباك إند**
+   - Build Command: `npm install && npx prisma generate && npx prisma migrate deploy`
+   - Start Command: `npm start`
+   - Instance Type: Free
+
+5. **إضافة Environment Variables**
+   - `DATABASE_URL` = Internal Database URL
+   - باقي المتغيرات (JWT_SECRET، إلخ) - بدون `PORT` وبدون `DB_HOST/PORT/USER/PASSWORD/NAME`
+   - `NODE_ENV=production`
+
+6. **مراقبة الـ Logs لحد ما تصير الحالة "Live"**
+
+### 📌 دروس ومشاكل واجهناها (مهم تتذكرها)
+
+| المشكلة | السبب | الحل |
+|---|---|---|
+| `Application exited early` | سطر `start` بيشاور على ملف غير موجود | تصحيح المسار بـ `package.json` |
+| بيانات قديمة مش موجودة على Render | القاعدة المحلية والقاعدة على Render **منفصلتين تماماً** | لازم نقل يدوي إذا بدنا البيانات |
+| فشل الاتصال بـ pgAdmin/Prisma Studio من الجهاز (`timeout`) | الشبكة/الراوتر عم يحظر بورت 5432 | جرب شبكة تانية (Hotspot) |
+| Shell مو متوفر على الخطة المجانية | قيود Render | استخدام pgAdmin بدل الـ Shell |
+
+### 📌 ملاحظات دائمة لازم تحفظها
+
+- الباك إند المجاني بينام بعد 15 دقيقة عدم استخدام (أول طلب بياخد ~30-60 ثانية)
+- قاعدة البيانات المجانية إلها تاريخ انتهاء (~شهر)، تحتاج تجديد
+- Internal URL بين خدمات Render، External URL للاتصال من جهازك
+- Auto-Deploy: أي `git push` عالـ main بيعمل نشر جديد تلقائياً
+
+---
+
+## الجزء الثاني: مشروع BarberOnYourTime (المشروع الجديد)
+
+### 🎯 فكرة المشروع
+تطبيق حجز مواعيد لصالونات الحلاقة، بنظام "تحويل تلقائي" - لو حلاق رفض الطلب، بينتقل تلقائياً لحلاق تاني متوفر بنفس الوقت.
+
+### 👥 أنواع المستخدمين
+- **Owner (صاحب المحل)**: يضيف حلاقين، يحدد خدمات، يشوف كل الحجوزات، يتدخل لو كل الحلاقين رفضوا
+- **Staff (حلاق)**: يحدد جدول دوامه، يشوف حجوزاته، يقبل/يرفض
+- **Customer (عميل)**: يحجز خدمة مع حلاق معين بوقت محدد
+
+### 🔄 دورة حياة الحجز
+1. العميل يختار: خدمة + حلاق معين + وقت → الحالة: **PENDING**
+2. الحلاق يوافق → **CONFIRMED** + إشعار للعميل
+3. الحلاق يرفض → ينتقل تلقائياً لأقرب حلاق متوفر بنفس الوقت
+4. لو كل الحلاقين رفضوا → **NEEDS_OWNER** + إشعار لصاحب المحل
+
+### 🗄️ الجداول (Database Schema) - ✅ مكتملة
+
+1. **User**: id, name, email, password, role (OWNER/STAFF/CUSTOMER)
+2. **Business**: id, name, address, ownerId
+3. **Staff**: id, userId, businessId
+4. **Service**: id, name, durationMinutes, price, businessId
+5. **Booking**: id, startTime, status, customerId, serviceId, staffId
+6. **BookingAttempt**: id, order, status, bookingId, staffId
+7. **Availability**: id, dayOfWeek, startTime, endTime, staffId
+
+### ✅ ما تم إنجازه (الكود)
+
+- [x] إعداد المشروع (npm init + تثبيت المكتبات)
+- [x] إعداد Prisma (schema.prisma + migration أول)
+- [x] هيكلية المجلدات (config, controllers, handlers, jobs, middlewares, routes, services, sockets, utils, validators)
+- [x] `config/prisma.js` - Prisma Client مشترك (Singleton) مع Adapter
+- [x] `utils/ApiError.js`, `utils/ApiResponse.js`, `utils/asyncHandler.js`
+- [x] `handlers/errorHandler.js`, `handlers/successHandler.js`
+- [x] **نظام Auth كامل** (بنمط Service + Controller):
+  - [x] `services/authService.js` (registerUser, loginUser)
+  - [x] `controllers/authController.js` (register, login)
+  - [x] `routes/authRoutes.js` → `/auth/register`, `/auth/login`
+  - [x] اختُبر بنجاح على Postman ✅
+- [x] **middlewares/authMiddleware.js** (`protect`) - التحقق من JWT Token
+- [x] **نظام إنشاء محل** (بنمط Service + Controller):
+  - [x] `services/businessService.js` (createBusinessForUser مع `$transaction`)
+  - [x] `controllers/businessController.js` (createBusiness)
+  - [x] `routes/businessRoutes.js` → `POST /business` (محمي بـ `protect`)
+  - [x] اختُبر بنجاح: إنشاء محل + ترقية تلقائية لـ OWNER ✅
+
+- [x] **نظام إضافة حلاقين بكود دعوة (One-Time Invite Code)**:
+  - [x] جدول جديد `StaffInvite` (code, businessId, used, usedByUserId)
+  - [x] `services/staffInviteService.js` (createStaffInvite, joinBusinessWithCode مع `$transaction` ثلاثي: إنشاء Staff + تحديث الكود لـ used + ترقية اليوزر لـ STAFF)
+  - [x] `controllers/staffInviteController.js` (generateInvite, joinBusiness)
+  - [x] Routes: `POST /business/staff-invites` (توليد كود، owner بس) و `POST /business/join` (استخدام كود، أي مستخدم مسجل)
+  - [x] اختُبر بنجاح: توليد كود → تسجيل حلاق → دخول → استخدام كود → انضم كـ Staff وترقّى تلقائياً من CUSTOMER لـ STAFF ✅
+
+- [x] **نظام إضافة الخدمات (Service)**:
+  - [x] `services/serviceService.js` (createService, getBusinessServices)
+  - [x] `controllers/serviceController.js` (addService, listServices)
+  - [x] Routes: `POST /services` و `GET /services` (owner بس، محمي بـ `protect`)
+  - [x] اختُبر بنجاح: إضافة 3 خدمات وعرضهم ✅
+
+- [x] **نظام تحديد أوقات الدوام (Availability)**:
+  - [x] `services/availabilityService.js` (addAvailability, getMyAvailability)
+  - [x] `controllers/availabilityController.js` (setAvailability, listMyAvailability)
+  - [x] Routes: `POST /availability` و `GET /availability` (staff بس، محمي بـ `protect`)
+  - [x] اختُبر بنجاح: إضافة 3 أيام دوام لـ Ahmad وعرضهم ✅
+
+- [x] **نظام الحجز (Booking) - المرحلة 1: إنشاء حجز**:
+  - [x] `services/bookingService.js` (createBooking + فحص عدم تكرار طلب معلق لنفس الوقت/الحلاق)
+  - [x] `controllers/bookingController.js` (requestBooking)
+  - [x] Routes: `POST /bookings` (محمي بـ `protect`)
+  - [x] 🐛 **إصلاح مهم**: `errorHandler` كان متعلق (Commented) بـ `app.js` من البداية - الأخطاء كانت ترجع كصفحة HTML بدل JSON. تم تفعيله.
+  - [x] اختُبر بنجاح: إنشاء حجز + منع تكرار نفس الطلب (409 Conflict) ✅
+
+- [x] **نظام الحجز (Booking) - المرحلة 2: التحويل التلقائي بين الحلاقين** 🎯:
+  - [x] دالة `findAvailableStaff` - تدور على حلاق بديل (يتحقق من Availability + عدم تعارض مع حجز CONFIRMED آخر)
+  - [x] دالة `respondToBooking` (ACCEPT/REJECT) - عند الرفض: تسجل REJECTED، تدور على حلاق بديل، تنقل الحجز إله (BookingAttempt جديدة + تحديث staffId) أو NEEDS_OWNER لو محدا متوفر
+  - [x] Routes: `PATCH /bookings/:bookingId/respond`
+  - [x] 🐛 **إصلاح مهم**: ثغرة أمان - كان ممكن OWNER يصير STAFF (وبالعكس) عن طريق استخدام كود دعوة أو إنشاء محل بدون فحص الـ role الحالي. تم إضافة فحوصات حماية بـ `createBusinessForUser` و `joinBusinessWithCode`
+  - [x] اختُبر بنجاح **سيناريو كامل**: محل + حلاقين (Ahmad, Khaled) بنفس الدوام → عميل حجز مع Ahmad → Ahmad رفض → تحويل تلقائي لـ Khaled → Khaled وافق → الحجز صار CONFIRMED ✅✅✅
+
+### 🔜 الخطوات القادمة (خطة مفصلة، بالترتيب)
+
+**1. Profile (لكل المستخدمين)** ✅
+- [x] `GET /users/me` - عرض بياناتي
+- [x] `PATCH /users/me` - تعديل الاسم/الإيميل
+- [x] `PATCH /users/me/password` - تعديل الباسورد (لازم يدخل الباسورد القديم كتأكيد)
+- [x] اختُبر بنجاح: عرض + تعديل اسم + تعديل باسورد ✅
+
+**2. طرد موظف (Owner)** ✅
+- [x] عمود `active Boolean @default(true)` على جدول `Staff` (Soft Delete بدل Hard Delete - لأنه الحذف الفعلي بيصطدم بقيود قاعدة البيانات مع BookingAttempt التاريخية)
+- [x] `DELETE /business/staff/:staffId` - يعطّل الموظف (active: false)، يرجع role لـ CUSTOMER
+- [x] حجوزات PENDING تبعه وقت الطرد → تتحول تلقائياً لحلاق تاني متوفر (نفس منطق `findAvailableStaff`)
+- [x] `findAvailableStaff` تم تعديلها لتستثني الموظفين المعطّلين (`active: true` بالفلتر)
+- [x] اختُبر بنجاح سيناريو كامل: طرد Ahmad وهو عندو حجز PENDING → انتقل تلقائياً لـ Khaled + Ahmad رجع CUSTOMER ومعطّل ✅
+- [x] 🐛 **إصلاح**: موظف مطرود (active: false) ما كان يقدر ينضم من جديد بكود جديد - الفحص كان يتأكد بس من وجود سجل Staff بدون فحص `active`. تم تصحيحه: لو عندو سجل قديم معطّل، يتفعّل من جديد (update) بدل إنشاء سجل جديد
+
+**3. الخدمات CRUD** ✅
+- [x] `PATCH /services/:id` - تعديل خدمة (محمي، يتأكد الخدمة تابعة لمحل صاحب الطلب)
+- [x] `DELETE /services/:id` - حذف خدمة (يرفض الحذف لو في حجوزات PENDING/NEEDS_OWNER معلقة عليها)
+- [x] اختُبر بنجاح: تعديل خدمة، رفض حذف خدمة عليها حجز معلق، ثم حذف ناجح بعد حل الحجز ✅
+
+**4. تعديل الدوام بموافقة المدير** ✅
+- [x] جدول جديد `AvailabilityChangeRequest` (dayOfWeek, startTime, endTime, status, staffId)
+- [x] `POST /availability/requests` - الحلاق يطلب تعديل
+- [x] `GET /availability/requests` - صاحب المحل يشوف الطلبات المعلقة (مع بيانات الموظف)
+- [x] `PATCH /availability/requests/:id` - يوافق/يرفض (لو وافق، ينشئ سطر Availability جديد فعلياً بـ `$transaction`)
+- [x] 🐛 **إصلاح أمني**: `include: { user: true }` كان بيرجّع الباسورد المشفر ضمن رد الـ API. تم استبداله بـ `select` محدد (id, name, email بس) - قاعدة عامة: أي `include` لجدول User لازم يُراجع لمنع تسريب password
+- [x] اختُبر بنجاح: طلب تعديل → موافقة → الدوام الجديد انضاف فعلياً بجانب القديم ✅
+- [x] **توسيع الميزة: حذف دوام بموافقة كمان** (نفس فلسفة أي تغيير بالدوام لازم يمر بموافقة):
+  - [x] عمود `type` (ADD/DELETE) + `availabilityId` (اختياري) على `AvailabilityChangeRequest`
+  - [x] `POST /availability/requests/delete` - الحلاق يطلب حذف دوام معين
+  - [x] `respondToRequest` تم توسيعها للتعامل مع فرع DELETE (يحذف السطر الفعلي من Availability بـ `$transaction`)
+  - [x] 🐛 تذكير: أي تعديل على `schema.prisma` يتطلب `npx prisma generate` + إعادة تشغيل السيرفر، وإلا الـ Client بالذاكرة يضل قديم ويرفض الحقول الجديدة
+  - [x] اختُبر بنجاح: طلب حذف دوام → موافقة → الدوام اختفى فعلياً ✅
+
+**5. إلغاء حجز (Customer)**
+- [ ] `DELETE /bookings/:id` - العميل يلغي حجزه (بس إلغاء، بدون تعديل وقت)
+- [ ] `GET /bookings/mine` - العميل يشوف حجوزاته
+
+**6. Logout**
+- [ ] بسيط - بدون Endpoint، التطبيق (Flutter لاحقاً) بيمسح التوكن المحفوظ عندو محلياً
+
+---
+
+**بعد هاي الست نقاط:**
+- [ ] نظام الإشعارات (Notifications)
+- [ ] لاحقاً: ربط الباك إند بتطبيق Flutter
+- [ ] لاحقاً: نشر المشروع على Render:
+  - [ ] إنشاء حجز جديد من العميل
+  - [ ] منطق "أول محاولة" (BookingAttempt رقم 1)
+  - [ ] قبول/رفض الحلاق للحجز
+  - [ ] منطق التحويل التلقائي لحلاق تاني عند الرفض
+  - [ ] حالة "NEEDS_OWNER" لما يرفض الكل
+- [ ] نظام الإشعارات (Notifications)
+- [ ] لاحقاً: ربط الباك إند بتطبيق Flutter
+- [ ] لاحقاً: نشر المشروع على Render (بنفس الخطوات يلي تعلمناها بالجزء الأول)
+
+---
+
+## 📝 ملاحظات تقنية مهمة تتذكرها
+
+- **نمط الكود المتبع**: Controller خفيف (يتحقق البيانات الأساسية بس) → Service (فيه كل منطق العمل الحقيقي مع Prisma)
+- **الأخطاء**: نستخدم `throw new ApiError(statusCode, message)` بدل `res.status().json()` مباشرة
+- **كل Controller ملفوف بـ `asyncHandler`** حتى نتجنب تكرار try/catch
+- **الردود الناجحة**: عن طريق `successHandler(res, statusCode, message, data)`
+- **JWT**: `expiresIn: "7d"`, بيحمل `{ userId, role }`
+- **حماية Routes**: نستخدم `protect` middleware قبل الـ Controller مباشرة بالـ Route
+- ⚠️ **لا تحدّث Prisma لنسخة 8 (rc)** - لسا تجريبية وغير مستقرة، خليك على `7.9.1`
+
+---
+
+*آخر تحديث: بعد إنجاح اختبار "إنشاء محل" وترقية OWNER على Postman*

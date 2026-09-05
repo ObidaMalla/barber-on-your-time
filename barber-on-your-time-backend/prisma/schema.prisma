@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(CUSTOMER)
+  fcmToken  String?  // 👈 إضافة حقل الـ FCM Token كـ Optional
+  createdAt DateTime @default(now())
+
+  staff   Staff?
+  booking Booking[]
+  usedInvites StaffInvite[]
+  business Business?   
+  
+  notifications Notification[] // 👈 جديد
+
+}
+
+enum Role {
+  OWNER
+  STAFF
+  CUSTOMER
+}
+
+model Business {
+  id      Int    @id @default(autoincrement())
+  name    String
+  address String?
+
+  ownerId Int  @unique
+  owner   User @relation(fields: [ownerId], references: [id])
+
+  staff    Staff[]
+  services Service[]
+  staffInvites StaffInvite[]
+
+  createdAt DateTime @default(now())
+}
+
+model Staff {
+  id Int @id @default(autoincrement())
+  active Boolean @default(true)  
+
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
+  businessId Int
+  business   Business @relation(fields: [businessId], references: [id])
+
+  bookings      Booking[]
+  attempts      BookingAttempt[]
+  availability  Availability[]
+  availabilityRequests AvailabilityChangeRequest[]
+
+  createdAt DateTime @default(now())
+}
+model StaffInvite {
+  id   Int    @id @default(autoincrement())
+  code String @unique
+
+  businessId Int
+  business   Business @relation(fields: [businessId], references: [id])
+
+  used       Boolean @default(false)
+  usedByUserId Int?
+  usedBy       User?   @relation(fields: [usedByUserId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Service {
+  id              Int    @id @default(autoincrement())
+  name            String
+  durationMinutes Int
+  price           Float
+
+  businessId Int
+  business   Business @relation(fields: [businessId], references: [id])
+
+  bookings Booking[]
+
+  createdAt DateTime @default(now())
+}
+
+model Booking {
+  id        Int      @id @default(autoincrement())
+  startTime DateTime
+  status    BookingStatus @default(PENDING)
+
+  customerId Int
+  customer   User @relation(fields: [customerId], references: [id])
+
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id])
+
+  staffId Int?
+  staff   Staff? @relation(fields: [staffId], references: [id])
+
+  attempts BookingAttempt[]
+
+  createdAt DateTime @default(now())
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  NEEDS_OWNER
+  CANCELLED
+}
+
+model BookingAttempt {
+  id     Int @id @default(autoincrement())
+  order  Int
+
+  status AttemptStatus @default(PENDING)
+
+  bookingId Int
+  booking   Booking @relation(fields: [bookingId], references: [id])
+
+  staffId Int
+  staff   Staff @relation(fields: [staffId], references: [id])
+
+  respondedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+enum AttemptStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+model Availability {
+  id        Int    @id @default(autoincrement())
+  dayOfWeek Int
+  startTime String
+  endTime   String
+
+  staffId Int
+  staff   Staff @relation(fields: [staffId], references: [id])
+
+    changeRequests AvailabilityChangeRequest[]   
+
+}
+
+model AvailabilityChangeRequest {
+  id        Int    @id @default(autoincrement())
+  type      RequestType @default(ADD)
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  status    RequestStatus @default(PENDING)
+
+  staffId Int
+  staff   Staff @relation(fields: [staffId], references: [id])
+
+  availabilityId Int?
+  availability   Availability? @relation(fields: [availabilityId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+enum RequestType {
+  ADD
+  UPDATE
+  DELETE
+}
+
+
+
+
+model BlacklistedToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    Int
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+enum NotificationType {
+  WELCOME
+    STAFF_JOINED // 👈 جديد
+  SERVICE_ADDED // 👈 جديد
+  AVAILABILITY_REQUEST // 👈طلب تعديل، طلب حذف، والرد (قبول/رفض)
+  AVAILABILITY_RESPONSE // 👈 جديد
+
+    BOOKING_CREATED // 👈 جديد
+  BOOKING_CANCELLED 
+
+   BOOKING_TRANSFERRED   // 👈 جديد — للحلاق الجديد
+  BOOKING_NEEDS_OWNER   // 👈 جديد — للمدير
+  BOOKING_STATUS_UPDATE // 👈 جديد — للزبون
+
+}
