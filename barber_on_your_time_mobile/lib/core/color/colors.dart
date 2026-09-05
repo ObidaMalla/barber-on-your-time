@@ -23,6 +23,5 @@ abstract class AppColors {
 
   static const Color barberRed = Color(0xFFB33A3A);
 
-  // نيون وردي/ماجنتا - للتباين مع الأصفر، ولعناصر التعديل/الأمان
   static const Color accentSecondary = Color(0xFFFF2E92);
 }
