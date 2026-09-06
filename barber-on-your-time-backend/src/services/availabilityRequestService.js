@@ -1,12 +1,27 @@
 import { prisma } from "../config/prisma.js";
 import { ApiError } from "../utils/ApiError.js";
+import { createNotification } from "./notificationsService.js";
 
-import { createNotification } from "./notificationsService.js"; // 👈 جديد
+// 👈 نفس الدالة المستخدمة بباقي الملفات — تحقق وتحويل تاريخ YYYY-MM-DD
+const parseDateOnly = (dateString) => {
+  if (!dateString || typeof dateString !== "string") {
+    throw new ApiError(400, "التاريخ مطلوب");
+  }
+  const match = dateString.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    throw new ApiError(400, "صيغة التاريخ غير صالحة، المطلوب YYYY-MM-DD");
+  }
+  const parsed = new Date(`${dateString}T00:00:00`);
+  if (isNaN(parsed.getTime())) {
+    throw new ApiError(400, "صيغة التاريخ غير صالحة");
+  }
+  return parsed;
+};
 
-export const requestAvailabilityChange = async (userId, availabilityId, dayOfWeek, startTime, endTime) => {
+export const requestAvailabilityChange = async (userId, availabilityId, date, startTime, endTime) => {
   const staff = await prisma.staff.findUnique({
     where: { userId },
-    include: { user: true, business: true }, // 👈 جديد — نحتاج اسم الموظف ومالك المحل
+    include: { user: true, business: true },
   });
   if (!staff) {
     throw new ApiError(403, "لازم تكون حلاق لطلب تعديل دوام");
@@ -17,9 +32,17 @@ export const requestAvailabilityChange = async (userId, availabilityId, dayOfWee
     throw new ApiError(404, "هاد الدوام مش تابع إلك");
   }
 
+  const parsedDate = parseDateOnly(date);
+  const dayOfWeek = parsedDate.getDay(); // 👈 محسوب سيرفر-سايد دايماً
+
+  if (!startTime || !endTime || startTime >= endTime) {
+    throw new ApiError(400, "وقت البدء لازم يكون قبل وقت النهاية");
+  }
+
   const request = await prisma.availabilityChangeRequest.create({
     data: {
       type: "UPDATE",
+      date: parsedDate,
       dayOfWeek,
       startTime,
       endTime,
@@ -28,7 +51,6 @@ export const requestAvailabilityChange = async (userId, availabilityId, dayOfWee
     },
   });
 
-  // 👇 جديد
   await createNotification({
     userId: staff.business.ownerId,
     type: "AVAILABILITY_REQUEST",
@@ -60,10 +82,10 @@ export const getPendingRequests = async (ownerId) => {
         },
       },
     },
+    orderBy: { createdAt: "desc" }, // 👈 جديد — ترتيب منطقي
   });
 };
 
-// ===== جديد: طلبات الحلاق المعلقة هو نفسه (للفرونت) =====
 export const getMyPendingRequests = async (userId) => {
   const staff = await prisma.staff.findUnique({ where: { userId } });
   if (!staff) {
@@ -76,12 +98,10 @@ export const getMyPendingRequests = async (userId) => {
   });
 };
 
-
-
 export const respondToRequest = async (ownerId, requestId, decision) => {
   const business = await prisma.business.findUnique({
     where: { ownerId },
-    include: { owner: true }, // 👈 جديد — نحتاج اسم المالك للإشعار
+    include: { owner: true },
   });
   if (!business) {
     throw new ApiError(404, "ما إلك محل مسجل");
@@ -89,7 +109,7 @@ export const respondToRequest = async (ownerId, requestId, decision) => {
 
   const request = await prisma.availabilityChangeRequest.findUnique({
     where: { id: requestId },
-    include: { staff: true }, // 👈 staff.userId موجود فيها أصلاً
+    include: { staff: true },
   });
   if (!request || request.staff.businessId !== business.id) {
     throw new ApiError(404, "الطلب مش موجود أو مش تابع لمحلك");
@@ -106,7 +126,6 @@ export const respondToRequest = async (ownerId, requestId, decision) => {
       data: { status: "REJECTED" },
     });
 
-    // 👇 جديد
     await createNotification({
       userId: request.staff.userId,
       type: "AVAILABILITY_RESPONSE",
@@ -129,10 +148,23 @@ export const respondToRequest = async (ownerId, requestId, decision) => {
       }),
     ]);
   } else {
+    // 👇 UPDATE — هلق لازم نتأكد ما في تعارض على staffId+date قبل التطبيق
+    const conflict = await prisma.availability.findFirst({
+      where: {
+        staffId: request.staffId,
+        date: request.date,
+        id: { not: request.availabilityId },
+      },
+    });
+    if (conflict) {
+      throw new ApiError(409, "عندك دوام مسجل أصلاً بهاد التاريخ، ما فيك توافق عالطلب");
+    }
+
     [, updatedRequest] = await prisma.$transaction([
       prisma.availability.update({
         where: { id: request.availabilityId },
         data: {
+          date: request.date,       // 👈 جديد
           dayOfWeek: request.dayOfWeek,
           startTime: request.startTime,
           endTime: request.endTime,
@@ -145,7 +177,6 @@ export const respondToRequest = async (ownerId, requestId, decision) => {
     ]);
   }
 
-  // 👇 جديد
   await createNotification({
     userId: request.staff.userId,
     type: "AVAILABILITY_RESPONSE",
@@ -160,7 +191,7 @@ export const respondToRequest = async (ownerId, requestId, decision) => {
 export const requestAvailabilityDeletion = async (userId, availabilityId) => {
   const staff = await prisma.staff.findUnique({
     where: { userId },
-    include: { user: true, business: true }, // 👈 جديد
+    include: { user: true, business: true },
   });
   if (!staff) {
     throw new ApiError(403, "لازم تكون حلاق لطلب حذف دوام");
@@ -174,6 +205,7 @@ export const requestAvailabilityDeletion = async (userId, availabilityId) => {
   const request = await prisma.availabilityChangeRequest.create({
     data: {
       type: "DELETE",
+      date: availability.date,       // 👈 جديد — ناخد التاريخ من الدوام نفسه
       dayOfWeek: availability.dayOfWeek,
       startTime: availability.startTime,
       endTime: availability.endTime,
@@ -182,7 +214,6 @@ export const requestAvailabilityDeletion = async (userId, availabilityId) => {
     },
   });
 
-  // 👇 جديد
   await createNotification({
     userId: staff.business.ownerId,
     type: "AVAILABILITY_REQUEST",

@@ -8,9 +8,10 @@ import '../../injections/bootStrap/auth/login_injection.dart';
 import '../../models/availability/addAvailability/add_availability_model.dart';
 
 class AddAvailabilityScreen extends StatefulWidget {
-  final List<int> existingDays; // 👈 قائمة الأيام المُضافة سابقاً
+  final List<DateTime>
+  existingDates; // 👈 استخدام قائمة التواريخ المسجلة بدلاً من رقم اليوم
 
-  const AddAvailabilityScreen({super.key, this.existingDays = const []});
+  const AddAvailabilityScreen({super.key, this.existingDates = const []});
 
   @override
   State<AddAvailabilityScreen> createState() => _AddAvailabilityScreenState();
@@ -19,11 +20,11 @@ class AddAvailabilityScreen extends StatefulWidget {
 class _AddAvailabilityScreenState extends State<AddAvailabilityScreen> {
   final AddAvailabilityCubit _cubit = getIt<AddAvailabilityCubit>();
 
+  DateTime? _selectedDate;
   int? _selectedDay;
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
 
-  // 1️⃣ خريطة الأيام المحدثة
   static const Map<int, String> _daysMap = {
     0: 'الأحد',
     1: 'الإثنين',
@@ -32,13 +33,42 @@ class _AddAvailabilityScreenState extends State<AddAvailabilityScreen> {
     4: 'الخميس',
     5: 'الجمعة',
     6: 'السبت',
-    7: 'الأحد',
   };
 
   @override
   void dispose() {
     _cubit.close();
     super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: AppColors.accentColor,
+              onPrimary: AppColors.backgroundColor,
+              surface: AppColors.cardColor,
+              onSurface: AppColors.textPrimary,
+            ),
+            dialogBackgroundColor: AppColors.backgroundColor,
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _selectedDay = picked.weekday % 7;
+      });
+    }
   }
 
   Future<void> _selectTime({required bool isStartTime}) async {
@@ -80,21 +110,34 @@ class _AddAvailabilityScreenState extends State<AddAvailabilityScreen> {
     return '$hour:$minute';
   }
 
+  String _formatDate(DateTime date) {
+    final y = date.year.toString().padLeft(4, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  // 👈 دالة مساعدة لمقارنة تاريخين من دون الوقت
+  bool _isSameDate(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
   void _submit() {
-    if (_selectedDay == null) {
+    if (_selectedDate == null || _selectedDay == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('يرجى اختيار يوم الدوام')));
+      ).showSnackBar(const SnackBar(content: Text('يرجى اختيار التاريخ')));
       return;
     }
 
-    // 🛑 الشرط: التحقق مما إذا كان اليوم مضافاً سابقاً
-    if (widget.existingDays.contains(_selectedDay)) {
+    // 🛑 الشرط الجديد: التحقق إذا كان التاريخ المختار مضافاً مسبقاً
+    final alreadyExists = widget.existingDates.any(
+      (d) => _isSameDate(d, _selectedDate!),
+    );
+
+    if (alreadyExists) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'أنت لديك دوام في هذا اليوم، قم بتعديل وقتك ولا يمكنك إضافة دوام بنفس اليوم.',
-          ),
+          content: Text('عندك دوام مسجل أصلاً بهاد التاريخ.'),
           backgroundColor: Colors.orangeAccent,
           duration: Duration(seconds: 4),
         ),
@@ -110,6 +153,7 @@ class _AddAvailabilityScreenState extends State<AddAvailabilityScreen> {
     }
 
     _cubit.addAvailability(
+      date: _formatDate(_selectedDate!),
       dayOfWeek: _selectedDay!,
       startTime: _formatTimeOfDay(_startTime!),
       endTime: _formatTimeOfDay(_endTime!),
@@ -139,153 +183,148 @@ class _AddAvailabilityScreenState extends State<AddAvailabilityScreen> {
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        body:
-            BlocConsumer<
-              AddAvailabilityCubit,
-              ResultState<AddAvailabilityModel>
-            >(
-              listener: (context, state) {
-                state.whenOrNull(
-                  success: (response) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          response.message ?? 'تم تحديد الدوام بنجاح',
-                        ),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                    Navigator.pop(context, true);
-                  },
-                  error: (message) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(message),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                    );
-                  },
+        body: BlocConsumer<AddAvailabilityCubit, ResultState<AddAvailabilityModel>>(
+          listener: (context, state) {
+            state.whenOrNull(
+              success: (response) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(response.message ?? 'تم تحديد الدوام بنجاح'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                Navigator.pop(context, true);
+              },
+              error: (message) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(message),
+                    backgroundColor: Colors.redAccent,
+                  ),
                 );
               },
-              builder: (context, state) {
-                final isLoading = state.maybeWhen(
-                  loading: () => true,
-                  orElse: () => false,
-                );
+            );
+          },
+          builder: (context, state) {
+            final isLoading = state.maybeWhen(
+              loading: () => true,
+              orElse: () => false,
+            );
 
-                return Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 10),
-                        Text(
-                          'اختر اليوم',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
+            return Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 10),
+                    Text(
+                      'اختر التاريخ',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: _pickDate,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.cardColor,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: _selectedDate != null
+                                ? AppColors.accentColor.withOpacity(0.5)
+                                : Colors.transparent,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<int>(
-                          dropdownColor: AppColors.cardColor,
-                          value: _selectedDay,
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 15,
-                          ),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: AppColors.cardColor,
-                            hintText: 'اختر اليوم...',
-                            hintStyle: TextStyle(
-                              color: AppColors.textSecondary,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          items: _daysMap.entries
-                              .where(
-                                (e) => e.key != 7,
-                              ) // تجنب التكرار في القائمة
-                              .map(
-                                (e) => DropdownMenuItem<int>(
-                                  value: e.key,
-                                  child: Text(e.value),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (val) {
-                            setState(() {
-                              _selectedDay = val;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          'أوقات العمل',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
+                        child: Row(
                           children: [
-                            Expanded(
-                              child: _buildTimePickerTile(
-                                title: 'وقت البدء',
-                                time: _startTime,
-                                onTap: () => _selectTime(isStartTime: true),
-                              ),
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              color: AppColors.accentColor,
+                              size: 20,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildTimePickerTile(
-                                title: 'وقت النهاية',
-                                time: _endTime,
-                                onTap: () => _selectTime(isStartTime: false),
+                            const SizedBox(width: 10),
+                            Text(
+                              _selectedDate != null
+                                  ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}  —  ${_daysMap[_selectedDay]}'
+                                  : 'اختر التاريخ...',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 40),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.accentColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            onPressed: isLoading ? null : _submit,
-                            child: isLoading
-                                ? CircularProgressIndicator(
-                                    color: AppColors.backgroundColor,
-                                  )
-                                : Text(
-                                    'حفظ الدوام',
-                                    style: TextStyle(
-                                      color: AppColors.backgroundColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'أوقات العمل',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTimePickerTile(
+                            title: 'وقت البدء',
+                            time: _startTime,
+                            onTap: () => _selectTime(isStartTime: true),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildTimePickerTile(
+                            title: 'وقت النهاية',
+                            time: _endTime,
+                            onTap: () => _selectTime(isStartTime: false),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                );
-              },
-            ),
+                    const SizedBox(height: 40),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accentColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        onPressed: isLoading ? null : _submit,
+                        child: isLoading
+                            ? CircularProgressIndicator(
+                                color: AppColors.backgroundColor,
+                              )
+                            : Text(
+                                'حفظ الدوام',
+                                style: TextStyle(
+                                  color: AppColors.backgroundColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

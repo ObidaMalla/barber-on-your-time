@@ -230,15 +230,18 @@ class _GetAvailabilityScreenState extends State<GetAvailabilityScreen> {
                 ),
               ),
               onPressed: () async {
-                final existingDays = _availabilityList
-                    .map((e) => e.dayOfWeek)
-                    .whereType<int>()
+                final existingDates = _availabilityList
+                    .where((e) => e.date != null)
+                    .map((e) => DateTime.tryParse(e.date!))
+                    .whereType<DateTime>()
                     .toList();
+
                 final result = await Navigator.push<bool>(
                   context,
                   MaterialPageRoute(
-                    builder: (_) =>
-                        AddAvailabilityScreen(existingDays: existingDays),
+                    builder: (_) => AddAvailabilityScreen(
+                      existingDates: existingDates,
+                    ), // 👈 هاد التغيير المطلوب
                   ),
                 );
                 if (result == true) {
@@ -268,10 +271,13 @@ class _GetAvailabilityScreenState extends State<GetAvailabilityScreen> {
     if (_availabilityList.isEmpty) {
       return _buildEmptyState();
     }
-
     final sortedList = List<AvailabilityData>.from(_availabilityList)
-      ..sort((a, b) => (a.dayOfWeek ?? 0).compareTo(b.dayOfWeek ?? 0));
-
+      ..sort((a, b) {
+        final da = a.date != null ? DateTime.tryParse(a.date!) : null;
+        final db = b.date != null ? DateTime.tryParse(b.date!) : null;
+        if (da == null || db == null) return 0;
+        return da.compareTo(db);
+      });
     return RefreshIndicator(
       color: AppColors.accentColor,
       backgroundColor: AppColors.cardColor,

@@ -13,7 +13,7 @@ class RequestAvailabilityCubit
 
   Future<void> requestChange({
     required int availabilityId,
-    required int dayOfWeek,
+    required String date, // 👈 بدل dayOfWeek
     required String startTime,
     required String endTime,
   }) async {
@@ -26,10 +26,12 @@ class RequestAvailabilityCubit
     emit(const ResultState.loading());
     try {
       final response = await requestAvailabilityRepo.requestChange(
-        availabilityId: availabilityId,
-        dayOfWeek: dayOfWeek,
-        startTime: startTime,
-        endTime: endTime,
+        RequestAvailabilityRequest(
+          availabilityId: availabilityId,
+          date: date, // 👈
+          startTime: startTime,
+          endTime: endTime,
+        ),
       );
       debugPrint('✅ [RequestAvailabilityCubit] Success: ${response.message}');
       emit(ResultState.success(response));

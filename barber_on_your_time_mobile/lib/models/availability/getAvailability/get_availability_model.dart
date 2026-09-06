@@ -24,6 +24,7 @@ class GetAvailabilityModel {
 @JsonSerializable()
 class AvailabilityData {
   int? id;
+  String? date; // 👈 تم إضافة حقل التاريخ هنا
   int? dayOfWeek;
   String? startTime;
   String? endTime;
@@ -31,6 +32,7 @@ class AvailabilityData {
 
   AvailabilityData({
     this.id,
+    this.date, // 👈 إضافته في الـ Constructor
     this.dayOfWeek,
     this.startTime,
     this.endTime,

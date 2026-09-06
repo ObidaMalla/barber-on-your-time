@@ -5,19 +5,17 @@ part 'request_availability_model.g.dart';
 @JsonSerializable()
 class RequestAvailabilityRequest {
   final int availabilityId;
-  final int dayOfWeek;
+  final String date; // 👈 بدل dayOfWeek
   final String startTime;
   final String endTime;
 
   RequestAvailabilityRequest({
     required this.availabilityId,
-    required this.dayOfWeek,
+    required this.date,
     required this.startTime,
     required this.endTime,
   });
 
-  factory RequestAvailabilityRequest.fromJson(Map<String, dynamic> json) =>
-      _$RequestAvailabilityRequestFromJson(json);
   Map<String, dynamic> toJson() => _$RequestAvailabilityRequestToJson(this);
 }
 
@@ -44,24 +42,24 @@ class RequestAvailabilityModel {
 class RequestAvailabilityData {
   int? id;
   String? type;
+  String? date; // 👈 جديد
   int? dayOfWeek;
   String? startTime;
   String? endTime;
   String? status;
   int? staffId;
   int? availabilityId;
-  String? createdAt;
 
   RequestAvailabilityData({
     this.id,
     this.type,
+    this.date,
     this.dayOfWeek,
     this.startTime,
     this.endTime,
     this.status,
     this.staffId,
     this.availabilityId,
-    this.createdAt,
   });
 
   factory RequestAvailabilityData.fromJson(Map<String, dynamic> json) =>

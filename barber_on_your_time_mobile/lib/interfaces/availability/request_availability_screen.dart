@@ -25,7 +25,7 @@ class _RequestAvailabilityScreenState extends State<RequestAvailabilityScreen> {
   late final RequestAvailabilityCubit _cubit;
   late TimeOfDay _startTime;
   late TimeOfDay _endTime;
-  late int _selectedDayOfWeek;
+  DateTime? _selectedDate; // 👈 بدل _selectedDayOfWeek
 
   static const Map<int, String> _daysMap = {
     0: 'الأحد',
@@ -41,7 +41,12 @@ class _RequestAvailabilityScreenState extends State<RequestAvailabilityScreen> {
   void initState() {
     super.initState();
     _cubit = getIt<RequestAvailabilityCubit>();
-    _selectedDayOfWeek = widget.currentAvailability.dayOfWeek ?? 0;
+
+    // 👈 نبدأ من التاريخ الحالي للدوام (لو موجود)، وإلا تاريخ اليوم
+    _selectedDate = widget.currentAvailability.date != null
+        ? DateTime.tryParse(widget.currentAvailability.date!)
+        : DateTime.now();
+
     _startTime =
         _parseTime(widget.currentAvailability.startTime) ??
         const TimeOfDay(hour: 9, minute: 0);
@@ -63,6 +68,38 @@ class _RequestAvailabilityScreenState extends State<RequestAvailabilityScreen> {
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+
+  String _formatDate(DateTime date) {
+    final y = date.year.toString().padLeft(4, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: AppColors.accentColor,
+              onPrimary: AppColors.backgroundColor,
+              surface: AppColors.cardColor,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
   }
 
   Future<void> _pickTime({required bool isStart}) async {
@@ -96,6 +133,16 @@ class _RequestAvailabilityScreenState extends State<RequestAvailabilityScreen> {
   }
 
   void _submit() {
+    if (_selectedDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('يرجى اختيار التاريخ'),
+          backgroundColor: AppColors.errorColor,
+        ),
+      );
+      return;
+    }
+
     final startStr = _formatTime(_startTime);
     final endStr = _formatTime(_endTime);
 
@@ -116,7 +163,7 @@ class _RequestAvailabilityScreenState extends State<RequestAvailabilityScreen> {
 
     _cubit.requestChange(
       availabilityId: widget.currentAvailability.id!,
-      dayOfWeek: _selectedDayOfWeek,
+      date: _formatDate(_selectedDate!), // 👈 بدل dayOfWeek
       startTime: startStr,
       endTime: endStr,
     );
@@ -124,7 +171,9 @@ class _RequestAvailabilityScreenState extends State<RequestAvailabilityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dayName = _daysMap[_selectedDayOfWeek] ?? 'غير محدد';
+    final dayName = _selectedDate != null
+        ? (_daysMap[_selectedDate!.weekday % 7] ?? '')
+        : '';
 
     return BlocProvider.value(
       value: _cubit,
@@ -188,7 +237,7 @@ class _RequestAvailabilityScreenState extends State<RequestAvailabilityScreen> {
                         _buildHeaderCard(dayName),
                         const SizedBox(height: 32),
                         Text(
-                          'اليوم المطلوب',
+                          'التاريخ المطلوب',
                           style: TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 18,
@@ -196,56 +245,47 @@ class _RequestAvailabilityScreenState extends State<RequestAvailabilityScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.inputColor,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: AppColors.borderColor.withOpacity(0.5),
+
+                        // 👈 صندوق اختيار التاريخ بدل الـ Dropdown
+                        InkWell(
+                          onTap: _pickDate,
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
                             ),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<int>(
-                              value: _selectedDayOfWeek,
-                              isExpanded: true,
-                              dropdownColor: AppColors.cardColor,
-                              icon: Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                color: AppColors.accentColor,
+                            decoration: BoxDecoration(
+                              color: AppColors.inputColor,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: AppColors.borderColor.withOpacity(0.5),
                               ),
-                              style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              items: _daysMap.entries.map((entry) {
-                                return DropdownMenuItem<int>(
-                                  value: entry.key,
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.event_rounded,
-                                        color: AppColors.accentColor,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Text(entry.value),
-                                    ],
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_rounded,
+                                  color: AppColors.accentColor,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  _selectedDate != null
+                                      ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}  —  $dayName'
+                                      : 'اختر التاريخ...',
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
                                   ),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() => _selectedDayOfWeek = value);
-                                }
-                              },
+                                ),
+                              ],
                             ),
                           ),
                         ),
+
                         const SizedBox(height: 24),
                         Text(
                           'الوقت الجديد المطلوب',

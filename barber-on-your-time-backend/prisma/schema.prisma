@@ -140,21 +140,24 @@ enum AttemptStatus {
   REJECTED
 }
 model Availability {
-  id        Int    @id @default(autoincrement())
-  dayOfWeek Int
+  id        Int      @id @default(autoincrement())
+  date      DateTime @db.Date        // 👈 جديد
+  dayOfWeek Int                       // بيضل موجود، محسوب تلقائياً من date
   startTime String
   endTime   String
 
   staffId Int
   staff   Staff @relation(fields: [staffId], references: [id])
 
-    changeRequests AvailabilityChangeRequest[]   
+  changeRequests AvailabilityChangeRequest[]
 
+  @@unique([staffId, date])           // 👈 جديد — يمنع تكرار نفس التاريخ لنفس الحلاق
 }
 
 model AvailabilityChangeRequest {
-  id        Int    @id @default(autoincrement())
+  id        Int         @id @default(autoincrement())
   type      RequestType @default(ADD)
+  date      DateTime    @db.Date      // 👈 جديد — بدل الاعتماد على dayOfWeek بس
   dayOfWeek Int
   startTime String
   endTime   String
@@ -168,6 +171,8 @@ model AvailabilityChangeRequest {
 
   createdAt DateTime @default(now())
 }
+
+
 
 
 

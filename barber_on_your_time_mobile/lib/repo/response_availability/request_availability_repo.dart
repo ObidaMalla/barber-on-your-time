@@ -6,21 +6,11 @@ class RequestAvailabilityRepo {
   final AvailabilityService availabilityService;
   RequestAvailabilityRepo(this.availabilityService);
 
-  Future<RequestAvailabilityModel> requestChange({
-    required int availabilityId,
-    required int dayOfWeek,
-    required String startTime,
-    required String endTime,
-  }) {
+  Future<RequestAvailabilityModel> requestChange(
+    RequestAvailabilityRequest request,
+  ) {
     return ApiExceptionHandler.handle<RequestAvailabilityModel>(
-      () => availabilityService.requestAvailabilityChange(
-        RequestAvailabilityRequest(
-          availabilityId: availabilityId,
-          dayOfWeek: dayOfWeek,
-          startTime: startTime,
-          endTime: endTime,
-        ),
-      ),
+      () => availabilityService.requestAvailabilityChange(request),
       fallbackErrorMessage: 'فشل إرسال طلب التعديل 🧨',
       isSuccess: (r) => r.success == true,
       extractMessage: (r) => r.message,

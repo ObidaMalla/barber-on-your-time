@@ -9,6 +9,7 @@ part of 'add_availability_model.dart';
 AddAvailabilityRequest _$AddAvailabilityRequestFromJson(
   Map<String, dynamic> json,
 ) => AddAvailabilityRequest(
+  date: json['date'] as String,
   dayOfWeek: (json['dayOfWeek'] as num).toInt(),
   startTime: json['startTime'] as String,
   endTime: json['endTime'] as String,
@@ -17,6 +18,7 @@ AddAvailabilityRequest _$AddAvailabilityRequestFromJson(
 Map<String, dynamic> _$AddAvailabilityRequestToJson(
   AddAvailabilityRequest instance,
 ) => <String, dynamic>{
+  'date': instance.date,
   'dayOfWeek': instance.dayOfWeek,
   'startTime': instance.startTime,
   'endTime': instance.endTime,

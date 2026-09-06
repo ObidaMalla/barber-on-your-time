@@ -4,11 +4,14 @@ part 'add_availability_model.g.dart';
 
 @JsonSerializable()
 class AddAvailabilityRequest {
+  final String date; // 👈 جديد
   final int dayOfWeek;
   final String startTime;
   final String endTime;
 
   AddAvailabilityRequest({
+    required this.date,
+
     required this.dayOfWeek,
     required this.startTime,
     required this.endTime,

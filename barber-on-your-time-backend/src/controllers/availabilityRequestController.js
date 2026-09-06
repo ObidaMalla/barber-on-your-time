@@ -11,16 +11,16 @@ import {
 
 export const createRequest = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-  const { availabilityId, dayOfWeek, startTime, endTime } = req.body;
+  const { availabilityId, date, startTime, endTime } = req.body; // 👈 date بدل dayOfWeek
 
-  if (!availabilityId || dayOfWeek === undefined || !startTime || !endTime) {
-    throw new ApiError(400, "availabilityId واليوم ووقت البداية والنهاية مطلوبين");
+  if (!availabilityId || !date || !startTime || !endTime) {
+    throw new ApiError(400, "availabilityId والتاريخ ووقت البداية والنهاية مطلوبين");
   }
 
   const request = await requestAvailabilityChange(
     userId,
     Number(availabilityId),
-    dayOfWeek,
+    date,        // 👈 نمرر النص وليس رقم يوم
     startTime,
     endTime
   );

@@ -29,6 +29,7 @@ Map<String, dynamic> _$GetAvailabilityModelToJson(
 AvailabilityData _$AvailabilityDataFromJson(Map<String, dynamic> json) =>
     AvailabilityData(
       id: (json['id'] as num?)?.toInt(),
+      date: json['date'] as String?,
       dayOfWeek: (json['dayOfWeek'] as num?)?.toInt(),
       startTime: json['startTime'] as String?,
       endTime: json['endTime'] as String?,
@@ -38,6 +39,7 @@ AvailabilityData _$AvailabilityDataFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$AvailabilityDataToJson(AvailabilityData instance) =>
     <String, dynamic>{
       'id': instance.id,
+      'date': instance.date,
       'dayOfWeek': instance.dayOfWeek,
       'startTime': instance.startTime,
       'endTime': instance.endTime,

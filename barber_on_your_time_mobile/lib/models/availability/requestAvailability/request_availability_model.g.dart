@@ -10,7 +10,7 @@ RequestAvailabilityRequest _$RequestAvailabilityRequestFromJson(
   Map<String, dynamic> json,
 ) => RequestAvailabilityRequest(
   availabilityId: (json['availabilityId'] as num).toInt(),
-  dayOfWeek: (json['dayOfWeek'] as num).toInt(),
+  date: json['date'] as String,
   startTime: json['startTime'] as String,
   endTime: json['endTime'] as String,
 );
@@ -19,7 +19,7 @@ Map<String, dynamic> _$RequestAvailabilityRequestToJson(
   RequestAvailabilityRequest instance,
 ) => <String, dynamic>{
   'availabilityId': instance.availabilityId,
-  'dayOfWeek': instance.dayOfWeek,
+  'date': instance.date,
   'startTime': instance.startTime,
   'endTime': instance.endTime,
 };
@@ -49,13 +49,13 @@ RequestAvailabilityData _$RequestAvailabilityDataFromJson(
 ) => RequestAvailabilityData(
   id: (json['id'] as num?)?.toInt(),
   type: json['type'] as String?,
+  date: json['date'] as String?,
   dayOfWeek: (json['dayOfWeek'] as num?)?.toInt(),
   startTime: json['startTime'] as String?,
   endTime: json['endTime'] as String?,
   status: json['status'] as String?,
   staffId: (json['staffId'] as num?)?.toInt(),
   availabilityId: (json['availabilityId'] as num?)?.toInt(),
-  createdAt: json['createdAt'] as String?,
 );
 
 Map<String, dynamic> _$RequestAvailabilityDataToJson(
@@ -63,11 +63,11 @@ Map<String, dynamic> _$RequestAvailabilityDataToJson(
 ) => <String, dynamic>{
   'id': instance.id,
   'type': instance.type,
+  'date': instance.date,
   'dayOfWeek': instance.dayOfWeek,
   'startTime': instance.startTime,
   'endTime': instance.endTime,
   'status': instance.status,
   'staffId': instance.staffId,
   'availabilityId': instance.availabilityId,
-  'createdAt': instance.createdAt,
 };

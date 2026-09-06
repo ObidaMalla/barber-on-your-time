@@ -11,6 +11,8 @@ class AddAvailabilityCubit extends Cubit<ResultState<AddAvailabilityModel>> {
     : super(const ResultState.idle());
 
   Future<void> addAvailability({
+    required String date, // 👈 جديد
+
     required int dayOfWeek,
     required String startTime,
     required String endTime,
@@ -24,6 +26,8 @@ class AddAvailabilityCubit extends Cubit<ResultState<AddAvailabilityModel>> {
     emit(const ResultState.loading());
     try {
       final request = AddAvailabilityRequest(
+        date: date, // 👈 جديد
+
         dayOfWeek: dayOfWeek,
         startTime: startTime,
         endTime: endTime,
