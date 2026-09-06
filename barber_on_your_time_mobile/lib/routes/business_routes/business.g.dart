@@ -12,7 +12,7 @@ part of 'business.dart';
 
 class _BusinessService implements BusinessService {
   _BusinessService(this._dio, {this.baseUrl, this.errorLogger}) {
-    baseUrl ??= 'http://localhost:3000';
+    baseUrl ??= 'https://barber-on-your-time.onrender.com';
   }
 
   final Dio _dio;

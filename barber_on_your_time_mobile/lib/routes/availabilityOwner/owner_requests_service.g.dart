@@ -12,7 +12,7 @@ part of 'owner_requests_service.dart';
 
 class _OwnerRequestsService implements OwnerRequestsService {
   _OwnerRequestsService(this._dio, {this.baseUrl, this.errorLogger}) {
-    baseUrl ??= 'http://localhost:3000';
+    baseUrl ??= 'https://barber-on-your-time.onrender.com';
   }
 
   final Dio _dio;

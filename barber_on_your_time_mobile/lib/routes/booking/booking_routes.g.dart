@@ -12,7 +12,7 @@ part of 'booking_routes.dart';
 
 class _BookingService implements BookingService {
   _BookingService(this._dio, {this.baseUrl, this.errorLogger}) {
-    baseUrl ??= 'http://localhost:3000';
+    baseUrl ??= 'https://barber-on-your-time.onrender.com';
   }
 
   final Dio _dio;

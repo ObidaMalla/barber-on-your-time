@@ -12,7 +12,7 @@ part of 'availability_service.dart';
 
 class _AvailabilityService implements AvailabilityService {
   _AvailabilityService(this._dio, {this.baseUrl, this.errorLogger}) {
-    baseUrl ??= 'http://localhost:3000';
+    baseUrl ??= 'https://barber-on-your-time.onrender.com';
   }
 
   final Dio _dio;
