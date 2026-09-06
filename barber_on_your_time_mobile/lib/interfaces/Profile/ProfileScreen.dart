@@ -3,17 +3,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/color/colors.dart';
+import '../../cubits/logoutCubit/logout_cubit.dart';
 import '../../cubits/profileCubit/profile_cubit.dart';
 import '../../cubits/profileCubit/updateDataProfileCubit/update_data_profile_cubit.dart';
 import '../../cubits/profileCubit/updatePasswordProfileCubit/update_password_cubit.dart';
 import '../../cubits/results_state.dart';
+import '../../models/logout/logout_model.dart';
 import '../../models/profile/profile_model.dart';
 import '../../models/profile/updateDataProfile/update_profile_model.dart';
 import '../../models/profile/updatePasswordProfile/update_password_model.dart';
-import '../../token/token_customer.dart';
 import '../createBusinessScreen/staffInvite/staffInviteScreen.dart';
 import '../login/loginScreen.dart';
 
+// =========================================================
+// Profile Screen Implementation
+// =========================================================
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -61,13 +65,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.dispose();
   }
 
-  Future<void> _tempLogout(BuildContext context) async {
-    await TokenStorage.removeToken();
-    if (!context.mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
+  // =========================================================
+  // Logout Flow: Confirm Dialog & Navigation
+  // =========================================================
+  Future<void> _showLogoutConfirmation(BuildContext context) async {
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => const _LogoutConfirmationSheet(),
     );
   }
 
@@ -265,7 +271,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                   SafeArea(
                     child: Column(
                       children: [
-                        // شريط علوي بسيط - أيقونة الدعوة تظهر بس للـ OWNER
                         Padding(
                           padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
                           child: Row(
@@ -536,7 +541,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             icon: Icons.logout_rounded,
             label: 'تسجيل الخروج',
             color: Colors.redAccent,
-            onTap: () => _tempLogout(context),
+            onTap: () => _showLogoutConfirmation(context),
           ),
         ],
       ),
@@ -580,8 +585,116 @@ class _ProfileScreenState extends State<ProfileScreen>
 }
 
 // =========================================================
-// زر الدعوة بالـ AppBar - بتأثير نبض خفيف مستمر يلفت الانتباه
+// _LogoutConfirmationSheet Implementation
 // =========================================================
+class _LogoutConfirmationSheet extends StatefulWidget {
+  const _LogoutConfirmationSheet();
+
+  @override
+  State<_LogoutConfirmationSheet> createState() =>
+      _LogoutConfirmationSheetState();
+}
+
+class _LogoutConfirmationSheetState extends State<_LogoutConfirmationSheet> {
+  String? _errorMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SheetShell(
+      title: 'تسجيل الخروج',
+      icon: Icons.logout_rounded,
+      accent: Colors.redAccent,
+      child: BlocConsumer<LogoutCubit, ResultState<LogoutModel>>(
+        listener: (context, state) async {
+          state.whenOrNull(
+            success: (response) async {
+              if (!context.mounted) return;
+              Navigator.of(context).pop(); // إغلاق الـ BottomSheet
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            },
+            error: (message) {
+              setState(() => _errorMessage = message);
+            },
+          );
+        },
+        builder: (context, state) {
+          final isLoading = state.maybeWhen(
+            loading: () => true,
+            orElse: () => false,
+          );
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'هل أنت تأكيد رغبتك في تسجيل الخروج؟ ستلاحظ توقف تنبيهاتك وتوجيهك لصفحة الدخول.',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  height: 1.4,
+                ),
+              ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 14),
+                _ErrorBanner(message: _errorMessage!),
+              ],
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: isLoading
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(
+                          52,
+                        ), // 👈 حل مشكلة height
+                        side: BorderSide(color: AppColors.borderColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: Text(
+                        'إلغاء',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _SheetSubmitButton(
+                      isLoading: isLoading,
+                      label: 'تأكيد الخروج',
+                      color: Colors.redAccent,
+                      onPressed: () {
+                        setState(() => _errorMessage = null);
+                        context
+                            .read<LogoutCubit>()
+                            .logoutUser(); // 👈 تعديل اسم الميثود هنا
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+// =========================================================
+// Components / Helpers
+// =========================================================
+
 class _InviteIconButton extends StatefulWidget {
   final VoidCallback onTap;
   const _InviteIconButton({required this.onTap});
@@ -643,9 +756,6 @@ class _InviteIconButtonState extends State<_InviteIconButton>
   }
 }
 
-// =========================================================
-// Widgets المساعدة (Bubble & Chips)
-// =========================================================
 class _CopiedBubble extends StatefulWidget {
   final VoidCallback onDone;
   const _CopiedBubble({required this.onDone});
@@ -783,9 +893,6 @@ class _PressableChipState extends State<_PressableChip> {
   }
 }
 
-// =========================================================
-// Base Bottom Sheet Shell
-// =========================================================
 class _SheetShell extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -912,7 +1019,7 @@ class _SheetSubmitButton extends StatelessWidget {
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          disabledBackgroundColor: color.withOpacity(0.4),
+          disabledBackgroundColor: color.withValues(alpha: 0.4),
           foregroundColor: AppColors.backgroundColor,
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -1307,7 +1414,7 @@ class _ErrorBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.errorColor.withOpacity(0.15),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.errorColor.withOpacity(0.4)),
+        border: Border.all(color: AppColors.errorColor.withValues(alpha: 0.4)),
       ),
       child: Row(
         children: [

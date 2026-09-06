@@ -1,9 +1,9 @@
 import '../../models/login/login_model.dart';
-import '../../routes/login/login.dart';
+import '../../routes/auth/auth_routes.dart';
 import '../apiExceptionHandler.dart';
 
 class LoginRepository {
-  final LoginService loginService;
+  final AuthService loginService;
   LoginRepository(this.loginService);
 
   Future<LoginModel> loginUser({

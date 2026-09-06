@@ -2,7 +2,7 @@ import 'package:get_it/get_it.dart';
 
 import '../../../cubits/loginCubit/login_cubit.dart';
 import '../../../repo/response_login/login_repo.dart';
-import '../../../routes/login/login.dart';
+import '../../../routes/auth/auth_routes.dart';
 import '../../dio_config.dart';
 
 final getIt = GetIt.instance;
@@ -15,12 +15,12 @@ void initGetItLogin() {
   }
   if (!getIt.isRegistered<LoginRepository>()) {
     getIt.registerLazySingleton<LoginRepository>(
-      () => LoginRepository(getIt<LoginService>()),
+      () => LoginRepository(getIt<AuthService>()),
     );
   }
-  if (!getIt.isRegistered<LoginService>()) {
-    getIt.registerLazySingleton<LoginService>(
-      () => LoginService(createAndSetupDio()),
+  if (!getIt.isRegistered<AuthService>()) {
+    getIt.registerLazySingleton<AuthService>(
+      () => AuthService(createAndSetupDio()),
     );
   }
 }

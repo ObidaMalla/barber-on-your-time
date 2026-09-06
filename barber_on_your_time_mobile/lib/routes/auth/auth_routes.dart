@@ -3,13 +3,17 @@ import 'package:retrofit/retrofit.dart';
 
 import '../../core/constants/api_constants.dart';
 import '../../models/login/login_model.dart';
+import '../../models/logout/logout_model.dart';
 
-part 'login.g.dart';
+part 'auth_routes.g.dart';
 
 @RestApi(baseUrl: ApiConstants.baseUrl)
-abstract class LoginService {
-  factory LoginService(Dio dio, {String baseUrl}) = _LoginService;
+abstract class AuthService {
+  factory AuthService(Dio dio, {String baseUrl}) = _AuthService;
 
   @POST('/auth/login')
   Future<LoginModel> login(@Body() Map<String, dynamic> body);
+
+  @POST('/auth/logout')
+  Future<LogoutModel> logout();
 }
