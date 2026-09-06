@@ -101,7 +101,7 @@ export const createBooking = async (customerId, serviceId, staffId, startTime) =
 
   const isAvailable = await checkStaffAvailability(staffId, parsedStartTime, service.durationMinutes);
   if (!isAvailable) {
-    throw new ApiError(409, "هاد الوقت غير متاح عند هاد الحلاق، جرب وقت تاني");
+    throw new ApiError(409, "هاد الوقت غير متاح عند هاد الحلاق او لا يمتلك الدوام بهذا اليوم، جرب وقت تاني");
   }
 
   const booking = await prisma.booking.create({
