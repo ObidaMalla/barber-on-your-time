@@ -75,17 +75,21 @@ const checkStaffAvailability = async (staffId, requestedStart, requestedDuration
 };
 */
 const checkStaffAvailability = async (staffId, requestedStart, requestedDurationMinutes) => {
-  // 1. تحويل الوقت والتاريخ لصيغة دقيقة لمقارنتها بالدوام المسجل
-  const requestedDateISO = requestedStart.toISOString().split("T")[0]; // YYYY-MM-DD
-  const requestedHHMM = requestedStart.toISOString().substring(11, 16); // HH:mm (UTC)
+  // 1. استخراج التاريخ بتوقيت ISO (YYYY-MM-DD)
+  const requestedDateISO = requestedStart.toISOString().split("T")[0];
+
+  // 2. تحويل الساعة والحيود الزمني للوقت المحلي المقروء (HH:mm)
+  // استخدام getHours و getMinutes للحصول على الوقت المحلي المُراد حظره
+  const hours = String(requestedStart.getHours()).padStart(2, "0");
+  const minutes = String(requestedStart.getMinutes()).padStart(2, "0");
+  const requestedHHMM = `${hours}:${minutes}`;
 
   const availabilitySlots = await prisma.availability.findMany({
     where: { staffId },
   });
 
-  // فحص المقارنة مع التاريخ الفعلي + الوقت
+  // فحص مطابقة التاريخ مع نطاق الوقت المحلي
   const hasScheduleForThisTime = availabilitySlots.some((slot) => {
-    // استخراج التاريخ من الدوام المسجل لصيغة YYYY-MM-DD
     const slotDateISO = new Date(slot.date).toISOString().split("T")[0];
 
     return (
@@ -96,10 +100,10 @@ const checkStaffAvailability = async (staffId, requestedStart, requestedDuration
   });
 
   if (!hasScheduleForThisTime) {
-    return false; // لا يمتلك دوام مسجل بنفس هذا التاريخ والوقت
+    return false;
   }
 
-  // 2. فحص التعارض مع الحجوزات القائمة
+  // فحص التعارض مع الحجوزات القائمة
   const requestedEnd = new Date(
     requestedStart.getTime() + (requestedDurationMinutes + BUFFER_MINUTES) * 60000
   );
@@ -125,11 +129,13 @@ const checkStaffAvailability = async (staffId, requestedStart, requestedDuration
   return true;
 };
 
-// تعديل دالة البحث عن حلاق بديل لتتوافق مع التواريخ الجديدة
 export const findAvailableStaff = async (businessId, serviceId, excludedStaffIds, startTime) => {
   const requestedDate = parseAndValidateDate(startTime);
   const requestedDateISO = requestedDate.toISOString().split("T")[0];
-  const requestedHHMM = requestedDate.toISOString().substring(11, 16);
+
+  const hours = String(requestedDate.getHours()).padStart(2, "0");
+  const minutes = String(requestedDate.getMinutes()).padStart(2, "0");
+  const requestedHHMM = `${hours}:${minutes}`;
 
   const candidates = await prisma.staff.findMany({
     where: { businessId, id: { notIn: excludedStaffIds }, active: true },
