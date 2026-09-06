@@ -75,38 +75,33 @@ const checkStaffAvailability = async (staffId, requestedStart, requestedDuration
 };
 */
 const checkStaffAvailability = async (staffId, requestedStart, requestedDurationMinutes) => {
-  // 1. استخراج التاريخ بتوقيت ISO (YYYY-MM-DD)
-  const requestedDateISO = requestedStart.toISOString().split("T")[0];
-
-  // 2. تحويل الساعة والحيود الزمني للوقت المحلي المقروء (HH:mm)
-  // استخدام getHours و getMinutes للحصول على الوقت المحلي المُراد حظره
-  const hours = String(requestedStart.getHours()).padStart(2, "0");
-  const minutes = String(requestedStart.getMinutes()).padStart(2, "0");
-  const requestedHHMM = `${hours}:${minutes}`;
-
+  // 1. جلب دوام الحلاق
   const availabilitySlots = await prisma.availability.findMany({
     where: { staffId },
   });
 
-  // فحص مطابقة التاريخ مع نطاق الوقت المحلي
-  const hasScheduleForThisTime = availabilitySlots.some((slot) => {
-    const slotDateISO = new Date(slot.date).toISOString().split("T")[0];
+  // 2. تحويل وقت الحجز المطلوب لـ Timestamp لسهولة المقارنة
+  const reqStartMs = requestedStart.getTime();
 
-    return (
-      slotDateISO === requestedDateISO &&
-      slot.startTime <= requestedHHMM &&
-      slot.endTime > requestedHHMM
-    );
+  // فحص ما إذا كان الحجز يقع ضمن أي فترة دوام مسجلة
+  const hasScheduleForThisTime = availabilitySlots.some((slot) => {
+    // جلب تاريخ الدوام المسجل بصيغة (YYYY-MM-DD)
+    const slotDateStr = new Date(slot.date).toISOString().split("T")[0];
+
+    // تركيب تاريخ ووقت بداية ونهاية الدوام بالكامل بنفس صيغة UTC القادمة من الموبايل
+    const slotStartMs = new Date(`${slotDateStr}T${slot.startTime}:00.000Z`).getTime();
+    const slotEndMs = new Date(`${slotDateStr}T${slot.endTime}:00.000Z`).getTime();
+
+    // التأكد أن وقت الحجز محصور بين بداية ونهاية الدوام
+    return reqStartMs >= slotStartMs && reqStartMs < slotEndMs;
   });
 
   if (!hasScheduleForThisTime) {
-    return false;
+    return false; // الحلاق غير متاح بهذا الوقت
   }
 
-  // فحص التعارض مع الحجوزات القائمة
-  const requestedEnd = new Date(
-    requestedStart.getTime() + (requestedDurationMinutes + BUFFER_MINUTES) * 60000
-  );
+  // 3. فحص التعارض مع الحجوزات القائمة
+  const requestedEndMs = reqStartMs + (requestedDurationMinutes + BUFFER_MINUTES) * 60000;
 
   const activeBookings = await prisma.booking.findMany({
     where: {
@@ -117,18 +112,15 @@ const checkStaffAvailability = async (staffId, requestedStart, requestedDuration
   });
 
   for (const existing of activeBookings) {
-    const existingStart = existing.startTime;
-    const existingEnd = new Date(
-      existingStart.getTime() + (existing.service.durationMinutes + BUFFER_MINUTES) * 60000
-    );
+    const existingStartMs = new Date(existing.startTime).getTime();
+    const existingEndMs = existingStartMs + (existing.service.durationMinutes + BUFFER_MINUTES) * 60000;
 
-    const overlaps = requestedStart < existingEnd && existingStart < requestedEnd;
+    const overlaps = reqStartMs < existingEndMs && existingStartMs < requestedEndMs;
     if (overlaps) return false;
   }
 
   return true;
 };
-
 export const findAvailableStaff = async (businessId, serviceId, excludedStaffIds, startTime) => {
   const requestedDate = parseAndValidateDate(startTime);
   const requestedDateISO = requestedDate.toISOString().split("T")[0];
