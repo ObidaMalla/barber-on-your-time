@@ -27,7 +27,7 @@ const parseAndValidateDate = (dateString) => {
 
 
 const BUFFER_MINUTES = 5;
-
+/*
 const checkStaffAvailability = async (staffId, requestedStart, requestedDurationMinutes) => {
   // ===== الخطوة 1 (جديدة): تأكد إنه الحلاق أصلاً عندو دوام مسجل بهاد اليوم والوقت =====
   const dayOfWeek = requestedStart.getDay();
@@ -73,7 +73,91 @@ const checkStaffAvailability = async (staffId, requestedStart, requestedDuration
 
   return true;
 };
+*/
+const checkStaffAvailability = async (staffId, requestedStart, requestedDurationMinutes) => {
+  // 1. تحويل الوقت والتاريخ لصيغة دقيقة لمقارنتها بالدوام المسجل
+  const requestedDateISO = requestedStart.toISOString().split("T")[0]; // YYYY-MM-DD
+  const requestedHHMM = requestedStart.toISOString().substring(11, 16); // HH:mm (UTC)
 
+  const availabilitySlots = await prisma.availability.findMany({
+    where: { staffId },
+  });
+
+  // فحص المقارنة مع التاريخ الفعلي + الوقت
+  const hasScheduleForThisTime = availabilitySlots.some((slot) => {
+    // استخراج التاريخ من الدوام المسجل لصيغة YYYY-MM-DD
+    const slotDateISO = new Date(slot.date).toISOString().split("T")[0];
+
+    return (
+      slotDateISO === requestedDateISO &&
+      slot.startTime <= requestedHHMM &&
+      slot.endTime > requestedHHMM
+    );
+  });
+
+  if (!hasScheduleForThisTime) {
+    return false; // لا يمتلك دوام مسجل بنفس هذا التاريخ والوقت
+  }
+
+  // 2. فحص التعارض مع الحجوزات القائمة
+  const requestedEnd = new Date(
+    requestedStart.getTime() + (requestedDurationMinutes + BUFFER_MINUTES) * 60000
+  );
+
+  const activeBookings = await prisma.booking.findMany({
+    where: {
+      staffId,
+      status: { in: ["PENDING", "CONFIRMED", "NEEDS_OWNER"] },
+    },
+    include: { service: { select: { durationMinutes: true } } },
+  });
+
+  for (const existing of activeBookings) {
+    const existingStart = existing.startTime;
+    const existingEnd = new Date(
+      existingStart.getTime() + (existing.service.durationMinutes + BUFFER_MINUTES) * 60000
+    );
+
+    const overlaps = requestedStart < existingEnd && existingStart < requestedEnd;
+    if (overlaps) return false;
+  }
+
+  return true;
+};
+
+// تعديل دالة البحث عن حلاق بديل لتتوافق مع التواريخ الجديدة
+export const findAvailableStaff = async (businessId, serviceId, excludedStaffIds, startTime) => {
+  const requestedDate = parseAndValidateDate(startTime);
+  const requestedDateISO = requestedDate.toISOString().split("T")[0];
+  const requestedHHMM = requestedDate.toISOString().substring(11, 16);
+
+  const candidates = await prisma.staff.findMany({
+    where: { businessId, id: { notIn: excludedStaffIds }, active: true },
+    include: { availability: true },
+  });
+
+  for (const staff of candidates) {
+    const isAvailableToday = staff.availability.some((a) => {
+      const slotDateISO = new Date(a.date).toISOString().split("T")[0];
+      return (
+        slotDateISO === requestedDateISO &&
+        a.startTime <= requestedHHMM &&
+        a.endTime > requestedHHMM
+      );
+    });
+
+    if (!isAvailableToday) continue;
+
+    const conflict = await prisma.booking.findFirst({
+      where: { staffId: staff.id, startTime: requestedDate, status: "CONFIRMED" },
+    });
+    if (conflict) continue;
+
+    return staff;
+  }
+
+  return null;
+};
 export const createBooking = async (customerId, serviceId, staffId, startTime) => {
   const parsedStartTime = parseAndValidateDate(startTime);
 
@@ -134,7 +218,7 @@ export const createBooking = async (customerId, serviceId, staffId, startTime) =
 };
 
 
-
+/*
 // 2. دالة البحث عن حلاق بديل عند الرفض
 export const findAvailableStaff = async (businessId, serviceId, excludedStaffIds, startTime) => {
   const requestedDate = parseAndValidateDate(startTime);
@@ -161,7 +245,7 @@ export const findAvailableStaff = async (businessId, serviceId, excludedStaffIds
   }
 
   return null;
-};
+};*/
 
 // 3. رد الحلاق على الحجز (Staff)
 export const respondToBooking = async (staffUserId, bookingId, decision) => {
