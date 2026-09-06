@@ -29,6 +29,26 @@ const parseAndValidateDate = (dateString) => {
 const BUFFER_MINUTES = 5;
 
 const checkStaffAvailability = async (staffId, requestedStart, requestedDurationMinutes) => {
+  // ===== الخطوة 1 (جديدة): تأكد إنه الحلاق أصلاً عندو دوام مسجل بهاد اليوم والوقت =====
+  const dayOfWeek = requestedStart.getDay();
+  const requestedHHMM = requestedStart.toTimeString().slice(0, 5);
+
+  const availabilitySlots = await prisma.availability.findMany({
+    where: { staffId },
+  });
+
+  const hasScheduleForThisTime = availabilitySlots.some(
+    (slot) =>
+      slot.dayOfWeek === dayOfWeek &&
+      slot.startTime <= requestedHHMM &&
+      slot.endTime > requestedHHMM
+  );
+
+  if (!hasScheduleForThisTime) {
+    return false; // الحلاق ما عندو دوام مسجل بهاد الوقت أصلاً - مش متاح
+  }
+
+  // ===== الخطوة 2 (الموجودة أصلاً): فحص التعارض مع حجوزات موجودة =====
   const requestedEnd = new Date(
     requestedStart.getTime() + (requestedDurationMinutes + BUFFER_MINUTES) * 60000
   );
