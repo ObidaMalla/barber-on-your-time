@@ -5,10 +5,11 @@ import 'package:get_it/get_it.dart';
 
 import 'core/notificateionService/notificationService.dart';
 import 'cubits/availabilityCubit/add_availability_cubit.dart';
+import 'cubits/availabilityCubit/free_slots_cubit.dart';
 import 'cubits/availabilityCubit/get_availability_cubit.dart';
-import 'cubits/availabilityCubit/get_pending_requests_cubit.dart';
 import 'cubits/availabilityCubit/request_availability_cubit.dart';
 import 'cubits/availabilityCubit/request_deletion_cubit.dart';
+import 'cubits/availabilityCubit/staff_free_slots_cubit.dart';
 import 'cubits/availabilityOwnerCubit/answer_request_cubit.dart';
 import 'cubits/availabilityOwnerCubit/owner_pending_requests_cubit.dart';
 import 'cubits/bookingCubit/cancel_booking_cubit.dart';
@@ -119,9 +120,9 @@ class MyApp extends StatelessWidget {
         BlocProvider<RequestAvailabilityCubit>(
           create: (_) => getIt<RequestAvailabilityCubit>(),
         ),
-        BlocProvider<GetPendingRequestsCubit>(
+        /* BlocProvider<GetPendingRequestsCubit>(
           create: (_) => getIt<GetPendingRequestsCubit>(),
-        ),
+        ),*/
         BlocProvider<RequestDeletionCubit>(
           create: (_) => getIt<RequestDeletionCubit>(),
         ),
@@ -156,6 +157,11 @@ class MyApp extends StatelessWidget {
           create: (_) => getIt<CancelBookingCubit>(),
         ),
         BlocProvider<LogoutCubit>(create: (_) => getIt<LogoutCubit>()),
+
+        BlocProvider<FreeSlotsCubit>(create: (_) => getIt<FreeSlotsCubit>()),
+        BlocProvider<StaffFreeSlotsCubit>(
+          create: (_) => getIt<StaffFreeSlotsCubit>(),
+        ),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,

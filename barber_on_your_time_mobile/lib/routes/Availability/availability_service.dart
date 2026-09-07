@@ -3,8 +3,8 @@ import 'package:retrofit/retrofit.dart';
 
 import '../../core/constants/api_constants.dart';
 import '../../models/availability/addAvailability/add_availability_model.dart';
+import '../../models/availability/free_slots/free_slots_model.dart';
 import '../../models/availability/getAvailability/get_availability_model.dart';
-import '../../models/availability/requestAvailability/get_pending_requests_model.dart';
 import '../../models/availability/requestAvailability/request_availability_model.dart';
 import '../../models/availability/requestDeletion/request_deletion_model.dart';
 
@@ -27,12 +27,15 @@ abstract class AvailabilityService {
     @Body() RequestAvailabilityRequest request,
   );
 
-  @GET('/availability/requests/mine')
-  Future<GetPendingRequestsModel> getMyPendingRequests();
-
   // ===== جديد =====
   @POST('/availability/requests/delete')
   Future<RequestDeletionModel> requestAvailabilityDeletion(
     @Body() RequestDeletionRequest request,
   );
+
+  @GET('/availability/me/free-slots')
+  Future<FreeSlotsModel> getMyFreeSlots();
+
+  @GET('/availability/staff/{staffId}/free-slots') // 👈 جديد
+  Future<FreeSlotsModel> getStaffFreeSlots(@Path('staffId') int staffId);
 }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../core/color/colors.dart';
 import 'Profile/ProfileScreen.dart';
+import 'availability/freeSlots/freeSlotsScreen.dart';
 import 'availability/get_availability_screen.dart';
 import 'booking/businesses_list_screen.dart';
 import 'booking/my_bookings_screen.dart';
@@ -69,7 +70,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
       // STAFF
       if (widget.userRole == 'STAFF') const GetAvailabilityScreen(),
-
+      if (widget.userRole == 'STAFF')
+        const FreeSlotsScreen(), // 👈 إضافة الشاشة هنا بعد أوقاتي
       // CUSTOMER
       if (widget.userRole == 'CUSTOMER') const BusinessesListScreen(),
 
@@ -115,6 +117,12 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           label: 'أوقاتي',
         ),
 
+      if (widget.userRole == 'STAFF')
+        const _NavItemData(
+          icon: Icons.event_available_rounded,
+          label: 'المتاحة', // 👈 إضافة التبويب في الشريط السفلي
+        ),
+
       // CUSTOMER
       if (widget.userRole == 'CUSTOMER')
         const _NavItemData(icon: Icons.storefront_rounded, label: 'الصالونات'),
@@ -140,20 +148,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   // ============================================================
 
   Future<void> _handleBackButton() async {
-    // ------------------------------------------------------------
-    // إذا لسنا في الصفحة الأولى
-    // نرجع للصفحة الأولى فقط
-    // ------------------------------------------------------------
-
     if (_currentIndex != 0) {
       _onTabTapped(0);
       return;
     }
-
-    // ------------------------------------------------------------
-    // إذا نحن بالصفحة الأولى
-    // نعرض تأكيد الخروج
-    // ------------------------------------------------------------
 
     if (_isExitDialogShowing) {
       return;
@@ -170,20 +168,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     }
 
     if (shouldExit) {
-      // ==========================================================
-      // IMPORTANT
-      // ==========================================================
-      //
-      // لا تستخدم:
-      //
-      // Navigator.pop(context)
-      //
-      // لأنه يرجع Route داخل Flutter.
-      //
-      // نحن نريد إنهاء Android Activity.
-      //
-      // ==========================================================
-
       await SystemNavigator.pop();
     }
   }
@@ -223,9 +207,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ==================================================
-                // ICON
-                // ==================================================
                 Container(
                   width: 65,
                   height: 65,
@@ -248,12 +229,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     size: 29,
                   ),
                 ),
-
                 const SizedBox(height: 18),
-
-                // ==================================================
-                // TITLE
-                // ==================================================
                 Text(
                   'إغلاق التطبيق؟',
                   textAlign: TextAlign.center,
@@ -263,12 +239,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-
                 const SizedBox(height: 9),
-
-                // ==================================================
-                // DESCRIPTION
-                // ==================================================
                 Text(
                   'هل أنت متأكد من رغبتك في إغلاق التطبيق؟',
                   textAlign: TextAlign.center,
@@ -278,17 +249,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     height: 1.5,
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
-                // ==================================================
-                // BUTTONS
-                // ==================================================
                 Row(
                   children: [
-                    // =================================================
-                    // CANCEL
-                    // =================================================
                     Expanded(
                       child: _dialogButton(
                         label: 'إلغاء',
@@ -298,12 +261,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         },
                       ),
                     ),
-
                     const SizedBox(width: 12),
-
-                    // =================================================
-                    // EXIT
-                    // =================================================
                     Expanded(
                       child: _dialogButton(
                         label: 'خروج',
@@ -324,10 +282,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
     return result ?? false;
   }
-
-  // ============================================================
-  // DIALOG BUTTON
-  // ============================================================
 
   Widget _dialogButton({
     required String label,
@@ -392,33 +346,21 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      // منع Flutter من تنفيذ Pop تلقائي
       canPop: false,
-
       onPopInvoked: (didPop) {
         if (didPop) {
           return;
         }
-
         _handleBackButton();
       },
-
       child: Scaffold(
         backgroundColor: AppColors.backgroundColor,
         extendBody: true,
-
-        // ==========================================================
-        // BODY
-        // ==========================================================
         body: PageView(
           controller: _pageController,
           physics: const NeverScrollableScrollPhysics(),
           children: _pages,
         ),
-
-        // ==========================================================
-        // BOTTOM NAVIGATION
-        // ==========================================================
         bottomNavigationBar: _buildBottomNavigation(),
       ),
     );
@@ -459,10 +401,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ============================================================
-  // NAV ITEM
-  // ============================================================
-
   Widget _buildNavItem({required int index, required _NavItemData item}) {
     final bool isSelected = _currentIndex == index;
 
@@ -477,16 +415,12 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           return AnimatedContainer(
             duration: const Duration(milliseconds: 280),
             curve: Curves.easeOutCubic,
-
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
-
               color: isSelected
                   ? AppColors.accentColor.withOpacity(0.12)
                   : Colors.transparent,
-
               boxShadow: isSelected
                   ? [
                       BoxShadow(
@@ -499,7 +433,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     ]
                   : [],
             ),
-
             child: Column(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -511,9 +444,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       ? AppColors.accentColor
                       : AppColors.textSecondary.withOpacity(0.6),
                 ),
-
                 const SizedBox(height: 3),
-
                 AnimatedDefaultTextStyle(
                   duration: const Duration(milliseconds: 200),
                   style: TextStyle(
@@ -535,10 +466,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     );
   }
 }
-
-// ================================================================
-// NAV ITEM DATA
-// ================================================================
 
 class _NavItemData {
   final IconData icon;
