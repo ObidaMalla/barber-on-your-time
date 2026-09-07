@@ -91,11 +91,12 @@ model Service {
 
   createdAt DateTime @default(now())
 }
-
 model Booking {
   id        Int      @id @default(autoincrement())
   startTime DateTime
   status    BookingStatus @default(PENDING)
+
+  completionCode String?  // 👈 جديد: كود التأكيد (6 أرقام)، Optional لأنو ما بيتولّد إلا وقت القبول (ACCEPT)، مش وقت إنشاء الحجز
 
   customerId Int
   customer   User @relation(fields: [customerId], references: [id])
@@ -116,6 +117,7 @@ enum BookingStatus {
   CONFIRMED
   NEEDS_OWNER
   CANCELLED
+  COMPLETED  // 👈 جديد: الحالة النهائية بعد ما الحلاق يدخل الكود صح
 }
 
 model BookingAttempt {
@@ -229,5 +231,9 @@ enum NotificationType {
 
   BOOKING_ACCEPTED
   BOOKING_REJECTED  
+
+  BOOKING_CODE                 // 👈 جديد: بيوصل للزبون وقت ما الحلاق يقبل، فيه كود التأكيد
+  BOOKING_COMPLETION_REQUESTED // 👈 جديد: بيوصل للحلاق لما الزبون يضغط "استلمت الخدمة" (تذكير بس)
+  BOOKING_COMPLETED            // 👈 جديد: بيوصل للزبون لما الحلاق يدخل الكود صح ويأكد الاكتمال
 
 }

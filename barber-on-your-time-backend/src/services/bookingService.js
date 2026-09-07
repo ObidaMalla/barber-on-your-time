@@ -6,6 +6,11 @@ const BUSINESS_TIMEZONE = "Asia/Damascus";
 const BUFFER_MINUTES = 5;
 const SLOT_STEP_MINUTES = 15;
 
+// 👈 جديد: توليد كود تأكيد عشوائي من 6 أرقام (كنص، مش رقم — عشان ما نضيع الأصفار بالبداية)
+const generateCompletionCode = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
 // ===== أدوات مساعدة عامة =====
 
 const parseAndValidateDate = (dateString) => {
@@ -237,24 +242,35 @@ export const respondToBooking = async (staffUserId, bookingId, decision) => {
   if (!currentAttempt) throw new ApiError(409, "هاد الحجز مش بانتظار ردك حالياً");
 
   // ==================== 1. في حال القبول ====================
-  if (decision === "ACCEPT") {
+   if (decision === "ACCEPT") {
     await prisma.bookingAttempt.update({
       where: { id: currentAttempt.id },
       data: { status: "ACCEPTED", respondedAt: new Date() },
     });
 
+    const completionCode = generateCompletionCode(); // 👈 جديد
+
     const confirmedBooking = await prisma.booking.update({
       where: { id: booking.id },
-      data: { status: "CONFIRMED" },
+      data: { status: "CONFIRMED", completionCode }, // 👈 جديد: نخزن الكود على الحجز
     });
 
-    // 🔔 إشعار للزبون بتم تأكيد الحجز (تم التغيير إلى BOOKING_STATUS_UPDATE)
+    // 🔔 إشعار للزبون بتم تأكيد الحجز
     await createNotification({
       userId: booking.customerId,
       type: "BOOKING_STATUS_UPDATE",
       title: "تم تأكيد حجزك ✅",
       message: `قبل الحلاق "${staff.user.name}" حجزك لخدمة "${booking.service.name}"`,
       data: { bookingId: confirmedBooking.id },
+    });
+
+    // 🔔 جديد: إشعار منفصل فيه كود التأكيد — منفصل عشان يكون واضح ومميز، مش مدفون بنص رسالة تانية
+    await createNotification({
+      userId: booking.customerId,
+      type: "BOOKING_CODE",
+      title: "كود تأكيد الخدمة 🔑",
+      message: `احتفظ بهاد الكود وأعطيه للحلاق بعد ما توخد خدمتك: ${completionCode}`,
+      data: { bookingId: confirmedBooking.id, completionCode },
     });
 
     return confirmedBooking;
