@@ -216,9 +216,6 @@ export const findAvailableStaff = async (businessId, serviceId, excludedStaffIds
   return null;
 };
 
-// ===== 3. رد الحلاق على الحجز =====
-
-// ===== 3. رد الحلاق على الحجز =====
 
 export const respondToBooking = async (staffUserId, bookingId, decision) => {
   const staff = await prisma.staff.findUnique({
@@ -251,10 +248,10 @@ export const respondToBooking = async (staffUserId, bookingId, decision) => {
       data: { status: "CONFIRMED" },
     });
 
-    // 🔔 إشعار للزبون بتم تأكيد الحجز
+    // 🔔 إشعار للزبون بتم تأكيد الحجز (تم التغيير إلى BOOKING_STATUS_UPDATE)
     await createNotification({
       userId: booking.customerId,
-      type: "BOOKING_ACCEPTED",
+      type: "BOOKING_STATUS_UPDATE",
       title: "تم تأكيد حجزك ✅",
       message: `قبل الحلاق "${staff.user.name}" حجزك لخدمة "${booking.service.name}"`,
       data: { bookingId: confirmedBooking.id },
@@ -269,10 +266,10 @@ export const respondToBooking = async (staffUserId, bookingId, decision) => {
     data: { status: "REJECTED", respondedAt: new Date() },
   });
 
-  // 🔔 إشعار للزبون بأن الحلاق الحلي رفض
+  // 🔔 إشعار للزبون بالرفض (تم التغيير إلى BOOKING_STATUS_UPDATE)
   await createNotification({
     userId: booking.customerId,
-    type: "BOOKING_REJECTED",
+    type: "BOOKING_STATUS_UPDATE",
     title: "تحديث بخصوص حجزك ⚠️",
     message: `اعتذر الحلاق "${staff.user.name}" عن استقبال حجزك، جاري البحث عن بديل...`,
     data: { bookingId: booking.id },
@@ -362,13 +359,12 @@ export const respondToBooking = async (staffUserId, bookingId, decision) => {
     userId: booking.customerId,
     type: "BOOKING_STATUS_UPDATE",
     title: "تحديث بخصوص حجزك 🔄",
-    message: `تم تحويل طلب حجزك إلى الحلاق "${nextStaffUser.name}" وبانتظار يمكنك الغاء الحجز اذا لا تريد هذا الحلاق `,
+    message: `تم تحويل طلب حجزك إلى الحلاق "${nextStaffUser.name}" وبانتظار موافقته. يمكنك إلغاء الحجز إذا لا تريد هذا الحلاق`,
     data: { bookingId: updatedBooking.id },
   });
 
   return updatedBooking;
 };
-
 // ===== 4. إلغاء حجز =====
 
 export const cancelBooking = async (customerId, bookingId) => {

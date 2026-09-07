@@ -227,4 +227,7 @@ enum NotificationType {
   BOOKING_NEEDS_OWNER   // 👈 جديد — للمدير
   BOOKING_STATUS_UPDATE // 👈 جديد — للزبون
 
+  BOOKING_ACCEPTED
+  BOOKING_REJECTED  
+
 }
