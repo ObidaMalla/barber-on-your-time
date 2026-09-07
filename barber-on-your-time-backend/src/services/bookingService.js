@@ -2,6 +2,8 @@ import { prisma } from "../config/prisma.js";
 import { ApiError } from "../utils/ApiError.js";
 import { createNotification } from "./notificationsService.js";
 
+
+const BUSINESS_TIMEZONE = "Asia/Damascus"; // 👈 سوريا (UTC+3)
 // دالة لتأمين تحويل التاريخ (للتخزين بقاعدة البيانات فقط)
 const parseAndValidateDate = (dateString) => {
   if (!dateString) {
@@ -22,29 +24,41 @@ const parseAndValidateDate = (dateString) => {
   return parsedDate;
 };
 
-// 👈 جديد وحاسم: استخراج التاريخ والوقت مباشرة من النص، بدون المرور بتايم زون السيرفر إطلاقاً
+
+// 👈 معدّل بالكامل: بيحول الوقت المستلم (UTC) لتوقيت العمل المحلي دايماً
 const extractDateTimeParts = (dateString) => {
-  if (!dateString || typeof dateString !== "string") {
-    throw new ApiError(400, "تاريخ الحجز مطلوب");
+  const formattedString =
+    typeof dateString === "string"
+      ? dateString.trim().replace(/T(\d):/, "T0$1:")
+      : dateString;
+
+  const date = new Date(formattedString);
+  if (isNaN(date.getTime())) {
+    throw new ApiError(400, "صيغة التاريخ غير صالحة");
   }
-  const match = dateString
-    .trim()
-    .match(/^(\d{4})-(\d{1,2})-(\d{1,2})T(\d{1,2}):(\d{2})/);
 
-  if (!match) {
-    throw new ApiError(400, "صيغة التاريخ غير صالحة، يرجى إرسال شي متل 2026-09-07T10:00:00");
-  }
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    weekday: "short",
+  });
 
-  const [, y, mo, d, h, mi] = match;
-  const dateStr = `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
-  const hhmm = `${h.padStart(2, "0")}:${mi}`;
+  const parts = formatter.formatToParts(date);
+  const map = {};
+  for (const p of parts) map[p.type] = p.value;
 
-  // 👈 يوم الأسبوع محسوب بـ UTC دايماً — رقم ثابت بغض النظر عن تايم زون السيرفر
-  const dayOfWeek = new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d))).getUTCDay();
+  const dateStr = `${map.year}-${map.month}-${map.day}`;
+  const hhmm = `${map.hour === "24" ? "00" : map.hour}:${map.minute}`;
+  const weekdayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const dayOfWeek = weekdayMap[map.weekday];
 
   return { dateStr, hhmm, dayOfWeek };
 };
-
 // 👈 جديد: تحويل تاريخ الـ Availability (المخزن كـ DATE بقاعدة البيانات) لنص YYYY-MM-DD بشكل ثابت (UTC)
 const availabilityDateToStr = (d) => {
   const dt = new Date(d);
