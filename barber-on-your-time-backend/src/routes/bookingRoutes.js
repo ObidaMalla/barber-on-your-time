@@ -5,6 +5,8 @@ import {
   listMyBookings,
   cancelMyBooking,
   listStaffBookings,
+  requestCompletion,   // 👈 جديد
+  confirmCompletion,   // 👈 جديد
 } from "../controllers/bookingController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -16,4 +18,7 @@ router.patch("/:bookingId/status", protect, respondBooking);
 router.delete("/:bookingId", protect, cancelMyBooking);
 router.get("/staff", protect, listStaffBookings);
 
+
+router.post("/:bookingId/request-completion", protect, requestCompletion); // الزبون
+router.post("/:bookingId/complete", protect, confirmCompletion);           // الحلاق
 export default router;

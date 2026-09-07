@@ -484,3 +484,101 @@ export const getMyFreeWindowsAll = async (userId) => {
 export const getStaffFreeWindowsAll = async (staffId) => {
   return await getFreeWindowsByStaffId(staffId);
 };
+
+
+
+
+// ===== 7. تأكيد اكتمال الخدمة =====
+
+// 👈 زر الزبون "تم استلام الخدمة" — بس بيبعت تذكير للحلاق، ما بيغير حالة الحجز
+export const requestServiceCompletion = async (customerId, bookingId) => {
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { customer: true, staff: { include: { user: true } } },
+  });
+
+  if (!booking) throw new ApiError(404, "الحجز مش موجود");
+  if (booking.customerId !== customerId) throw new ApiError(403, "هاد الحجز مش إلك");
+  if (booking.status !== "CONFIRMED") {
+    throw new ApiError(409, "ما فيك تأكد استلام خدمة لحجز مش مؤكد أصلاً");
+  }
+  if (!booking.staff) {
+    throw new ApiError(400, "هاد الحجز ما إلو حلاق محدد حالياً");
+  }
+
+  // 🔔 تذكير للحلاق فيه نفس الكود — بدون أي تغيير على حالة الحجز
+  await createNotification({
+    userId: booking.staff.userId,
+    type: "BOOKING_COMPLETION_REQUESTED",
+    title: "الزبون بانتظار تأكيدك 🙋",
+    message: `الزبون "${booking.customer.name}" بيقول استلم خدمتو. اطلب منو الكود وأدخلو لتأكيد الاكتمال: ${booking.completionCode}`,
+    data: { bookingId: booking.id, completionCode: booking.completionCode },
+  });
+
+  return { message: "تم تنبيه الحلاق" };
+};
+
+// 👈 الحلاق يدخل الكود — هون فعلياً بيصير الحجز COMPLETED
+const COMPLETION_GRACE_MINUTES = 60; // 👈 المهلة المسموحة بعد وقت الموعد (بالدقايق)
+
+export const confirmBookingCompletion = async (staffUserId, bookingId, enteredCode) => {
+  const staff = await prisma.staff.findUnique({ where: { userId: staffUserId } });
+  if (!staff) throw new ApiError(403, "لازم تكون حلاق لتأكيد الخدمة");
+
+  const booking = await prisma.booking.findUnique({
+    where: { id: bookingId },
+    include: { customer: true, service: true },
+  });
+
+  if (!booking) throw new ApiError(404, "الحجز مش موجود");
+  if (booking.staffId !== staff.id) throw new ApiError(403, "هاد الحجز مش إلك");
+  if (booking.status !== "CONFIRMED") {
+    throw new ApiError(409, "هاد الحجز مش بحالة تسمح بتأكيد الاكتمال");
+  }
+
+  const now = new Date();
+  const graceDeadline = new Date(booking.startTime.getTime() + COMPLETION_GRACE_MINUTES * 60000);
+
+  // ⏰ لسا بدري — الموعد لسا ما اجا وقتو
+  if (now < booking.startTime) {
+    throw new ApiError(400, "لسا بدري، ما فيك تأكد الاكتمال قبل وقت الموعد");
+  }
+
+  // ⏰ فات الوقت المسموح — نحول الحالة تلقائياً لـ NO_SHOW ونرفض الطلب
+  if (now > graceDeadline) {
+    await prisma.booking.update({
+      where: { id: booking.id },
+      data: { status: "NO_SHOW" },
+    });
+
+    await createNotification({
+      userId: booking.customerId,
+      type: "BOOKING_STATUS_UPDATE",
+      title: "تم إلغاء حجزك تلقائياً ⚠️",
+      message: `فات الوقت المسموح لتأكيد استلام خدمة "${booking.service.name}" ولم يتم التأكيد`,
+      data: { bookingId: booking.id },
+    });
+
+    throw new ApiError(409, "فات الوقت المسموح لتأكيد هاد الحجز، تم تحويله لحالة عدم حضور");
+  }
+
+  // ✅ بالوقت الصحيح — نتحقق من الكود عادي
+  if (!enteredCode || enteredCode.trim() !== booking.completionCode) {
+    throw new ApiError(400, "الكود غلط، تأكد من الزبون وجرب كمان مرة");
+  }
+
+  const completedBooking = await prisma.booking.update({
+    where: { id: booking.id },
+    data: { status: "COMPLETED" },
+  });
+
+  await createNotification({
+    userId: booking.customerId,
+    type: "BOOKING_COMPLETED",
+    title: "تم إتمام الخدمة ✅",
+    message: `تم تأكيد استلامك لخدمة "${booking.service.name}"، نتمنى إنك عجبتك!`,
+    data: { bookingId: completedBooking.id },
+  });
+
+  return completedBooking;
+};

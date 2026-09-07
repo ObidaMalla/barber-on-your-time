@@ -100,6 +100,8 @@ import {
   cancelBooking,
   getMyBookings,
   getStaffBookings,
+  requestServiceCompletion,   // 👈 جديد
+  confirmBookingCompletion,   // 👈 جديد
 } from "../services/bookingService.js";
 export const requestBooking = asyncHandler(async (req, res) => {
   const customerId = req.user.id;
@@ -144,4 +146,28 @@ export const listStaffBookings = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const bookings = await getStaffBookings(userId);
   return successHandler(res, 200, "حجوزات الحلاق", bookings);
+});
+
+
+// 👈 الزبون يضغط "تم استلام الخدمة"
+export const requestCompletion = asyncHandler(async (req, res) => {
+  const customerId = req.user.id;
+  const { bookingId } = req.params;
+
+  const result = await requestServiceCompletion(customerId, Number(bookingId));
+  return successHandler(res, 200, result.message, null);
+});
+
+// 👈 الحلاق يدخل الكود لتأكيد الاكتمال
+export const confirmCompletion = asyncHandler(async (req, res) => {
+  const staffUserId = req.user.id;
+  const { bookingId } = req.params;
+  const { code } = req.body;
+
+  if (!code) {
+    throw new ApiError(400, "كود التأكيد مطلوب");
+  }
+
+  const booking = await confirmBookingCompletion(staffUserId, Number(bookingId), code);
+  return successHandler(res, 200, "تم تأكيد اكتمال الخدمة بنجاح", booking);
 });

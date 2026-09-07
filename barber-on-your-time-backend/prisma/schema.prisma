@@ -118,6 +118,8 @@ enum BookingStatus {
   NEEDS_OWNER
   CANCELLED
   COMPLETED  // 👈 جديد: الحالة النهائية بعد ما الحلاق يدخل الكود صح
+    NO_SHOW  // 👈 جديد: فات وقت التأكيد ولا حد أكد الاستلام
+
 }
 
 model BookingAttempt {
