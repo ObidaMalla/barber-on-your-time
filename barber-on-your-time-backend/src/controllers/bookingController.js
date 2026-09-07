@@ -100,8 +100,9 @@ import {
   cancelBooking,
   getMyBookings,
   getStaffBookings,
+  getAvailableSlots,
+  getAvailableSlotsAll, // 👈 جديد
 } from "../services/bookingService.js";
-
 export const requestBooking = asyncHandler(async (req, res) => {
   const customerId = req.user.id;
   const { serviceId, staffId, startTime } = req.body;
@@ -145,4 +146,27 @@ export const listStaffBookings = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const bookings = await getStaffBookings(userId);
   return successHandler(res, 200, "حجوزات الحلاق", bookings);
+});
+export const getStaffAvailableSlots = asyncHandler(async (req, res) => {
+  const { staffId, date } = req.params;
+  const { serviceId } = req.query;
+
+  if (!serviceId) {
+    throw new ApiError(400, "serviceId مطلوب");
+  }
+
+  const slots = await getAvailableSlots(Number(staffId), date, Number(serviceId));
+  return successHandler(res, 200, "الأوقات المتاحة", slots);
+});
+
+export const getStaffAvailableSlotsAll = asyncHandler(async (req, res) => {
+  const { staffId } = req.params;
+  const { serviceId } = req.query;
+
+  if (!serviceId) {
+    throw new ApiError(400, "serviceId مطلوب");
+  }
+
+  const result = await getAvailableSlotsAll(Number(staffId), Number(serviceId));
+  return successHandler(res, 200, "الأوقات المتاحة", result);
 });
