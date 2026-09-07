@@ -361,45 +361,14 @@ export const getStaffBookings = async (userId) => {
 
 // ===== 6. الأوقات الفاضية (للزبون + للحلاق) =====
 
-// للزبون: أوقات محددة فاضية بيوم معين، حسب مدة خدمة معينة
-export const getAvailableSlots = async (staffId, dateStr, serviceId) => {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "")) {
-    throw new ApiError(400, "صيغة التاريخ غير صالحة، المطلوب YYYY-MM-DD");
-  }
 
-  const service = await prisma.service.findUnique({ where: { id: serviceId } });
-  if (!service) throw new ApiError(404, "الخدمة مش موجودة");
-
+// ===== فراغات حلاق معيّن (staffId مباشر) — الدالة الأساسية المشتركة =====
+const getFreeWindowsByStaffId = async (staffId) => {
   const staff = await prisma.staff.findUnique({ where: { id: staffId } });
   if (!staff) throw new ApiError(404, "الحلاق مش موجود");
 
-  const allAvailability = await prisma.availability.findMany({ where: { staffId } });
-  const dayAvailability = allAvailability.find((a) => availabilityDateToStr(a.date) === dateStr);
-  if (!dayAvailability) return [];
-
-  const busyIntervals = await getBusyIntervals(staffId, dateStr);
-
-  const workStart = timeToMinutes(dayAvailability.startTime);
-  const workEnd = timeToMinutes(dayAvailability.endTime);
-  const duration = service.durationMinutes;
-
-  const slots = [];
-  for (let slotStart = workStart; slotStart + duration <= workEnd; slotStart += SLOT_STEP_MINUTES) {
-    const slotEnd = slotStart + duration + BUFFER_MINUTES;
-    const overlaps = busyIntervals.some((b) => slotStart < b.endMin && b.startMin < slotEnd);
-    if (!overlaps) slots.push(minutesToTime(slotStart));
-  }
-
-  return slots;
-};
-
-// للحلاق نفسه: فترات فراغه العامة، لكل أيام دوامه المسجلة دفعة وحدة (بدون تحديد تاريخ)
-export const getMyFreeWindowsAll = async (userId) => {
-  const staff = await prisma.staff.findUnique({ where: { userId } });
-  if (!staff) throw new ApiError(403, "لازم تكون حلاق");
-
   const allAvailability = await prisma.availability.findMany({
-    where: { staffId: staff.id },
+    where: { staffId },
     orderBy: { date: "asc" },
   });
 
@@ -407,7 +376,7 @@ export const getMyFreeWindowsAll = async (userId) => {
 
   for (const dayAvailability of allAvailability) {
     const dateStr = availabilityDateToStr(dayAvailability.date);
-    const busyIntervals = (await getBusyIntervals(staff.id, dateStr)).sort((a, b) => a.startMin - b.startMin);
+    const busyIntervals = (await getBusyIntervals(staffId, dateStr)).sort((a, b) => a.startMin - b.startMin);
 
     const workStart = timeToMinutes(dayAvailability.startTime);
     const workEnd = timeToMinutes(dayAvailability.endTime);
@@ -432,38 +401,15 @@ export const getMyFreeWindowsAll = async (userId) => {
 
   return results;
 };
-// للزبون: أوقات فاضية لكل أيام دوام الحلاق المسجلة، حسب خدمة معينة
-export const getAvailableSlotsAll = async (staffId, serviceId) => {
-  const service = await prisma.service.findUnique({ where: { id: serviceId } });
-  if (!service) throw new ApiError(404, "الخدمة مش موجودة");
 
-  const staff = await prisma.staff.findUnique({ where: { id: staffId } });
-  if (!staff) throw new ApiError(404, "الحلاق مش موجود");
+// للحلاق: فراغاته هو، بتوكن نفسه (userId → staff)
+export const getMyFreeWindowsAll = async (userId) => {
+  const staff = await prisma.staff.findUnique({ where: { userId } });
+  if (!staff) throw new ApiError(403, "لازم تكون حلاق");
+  return await getFreeWindowsByStaffId(staff.id);
+};
 
-  const allAvailability = await prisma.availability.findMany({
-    where: { staffId },
-    orderBy: { date: "asc" },
-  });
-
-  const duration = service.durationMinutes;
-  const results = [];
-
-  for (const dayAvailability of allAvailability) {
-    const dateStr = availabilityDateToStr(dayAvailability.date);
-    const busyIntervals = await getBusyIntervals(staffId, dateStr);
-
-    const workStart = timeToMinutes(dayAvailability.startTime);
-    const workEnd = timeToMinutes(dayAvailability.endTime);
-
-    const slots = [];
-    for (let slotStart = workStart; slotStart + duration <= workEnd; slotStart += SLOT_STEP_MINUTES) {
-      const slotEnd = slotStart + duration + BUFFER_MINUTES;
-      const overlaps = busyIntervals.some((b) => slotStart < b.endMin && b.startMin < slotEnd);
-      if (!overlaps) slots.push(minutesToTime(slotStart));
-    }
-
-    results.push({ date: dateStr, slots });
-  }
-
-  return results;
+// للزبون: فراغات حلاق محدد، بتوكن الزبون
+export const getStaffFreeWindowsAll = async (staffId) => {
+  return await getFreeWindowsByStaffId(staffId);
 };

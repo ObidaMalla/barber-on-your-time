@@ -1,5 +1,10 @@
 import express from "express";
-import { setAvailability, listMyAvailability, getMyFreeSlotsAll } from "../controllers/availabilityController.js";
+import {
+  setAvailability,
+  listMyAvailability,
+  getMyFreeSlotsAll,
+  getStaffFreeSlotsAll,
+} from "../controllers/availabilityController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import {
   createRequest,
@@ -13,7 +18,9 @@ const router = express.Router();
 
 router.post("/", protect, setAvailability);
 router.get("/", protect, listMyAvailability);
-router.get("/me/free-slots", protect, getMyFreeSlotsAll);
+
+router.get("/me/free-slots", protect, getMyFreeSlotsAll);           // 👈 الحلاق عن حاله
+router.get("/staff/:staffId/free-slots", protect, getStaffFreeSlotsAll); // 👈 الزبون عن حلاق محدد
 
 router.post("/requests", protect, createRequest);
 router.get("/requests", protect, listRequests);
