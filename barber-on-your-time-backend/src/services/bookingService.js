@@ -218,6 +218,8 @@ export const findAvailableStaff = async (businessId, serviceId, excludedStaffIds
 
 // ===== 3. رد الحلاق على الحجز =====
 
+// ===== 3. رد الحلاق على الحجز =====
+
 export const respondToBooking = async (staffUserId, bookingId, decision) => {
   const staff = await prisma.staff.findUnique({
     where: { userId: staffUserId },
@@ -227,7 +229,7 @@ export const respondToBooking = async (staffUserId, bookingId, decision) => {
 
   const booking = await prisma.booking.findUnique({
     where: { id: bookingId },
-    include: { customer: true },
+    include: { customer: true, service: true },
   });
   if (!booking) throw new ApiError(404, "الحجز مش موجود");
   if (booking.staffId !== staff.id) throw new ApiError(403, "هاد الحجز مش موجه إلك");
@@ -237,17 +239,43 @@ export const respondToBooking = async (staffUserId, bookingId, decision) => {
   });
   if (!currentAttempt) throw new ApiError(409, "هاد الحجز مش بانتظار ردك حالياً");
 
+  // ==================== 1. في حال القبول ====================
   if (decision === "ACCEPT") {
     await prisma.bookingAttempt.update({
       where: { id: currentAttempt.id },
       data: { status: "ACCEPTED", respondedAt: new Date() },
     });
-    return await prisma.booking.update({ where: { id: booking.id }, data: { status: "CONFIRMED" } });
+
+    const confirmedBooking = await prisma.booking.update({
+      where: { id: booking.id },
+      data: { status: "CONFIRMED" },
+    });
+
+    // 🔔 إشعار للزبون بتم تأكيد الحجز
+    await createNotification({
+      userId: booking.customerId,
+      type: "BOOKING_ACCEPTED",
+      title: "تم تأكيد حجزك ✅",
+      message: `قبل الحلاق "${staff.user.name}" حجزك لخدمة "${booking.service.name}"`,
+      data: { bookingId: confirmedBooking.id },
+    });
+
+    return confirmedBooking;
   }
 
+  // ==================== 2. في حال الرفض ====================
   await prisma.bookingAttempt.update({
     where: { id: currentAttempt.id },
     data: { status: "REJECTED", respondedAt: new Date() },
+  });
+
+  // 🔔 إشعار للزبون بأن الحلاق الحلي رفض
+  await createNotification({
+    userId: booking.customerId,
+    type: "BOOKING_REJECTED",
+    title: "تحديث بخصوص حجزك ⚠️",
+    message: `اعتذر الحلاق "${staff.user.name}" عن استقبال حجزك، جاري البحث عن بديل...`,
+    data: { bookingId: booking.id },
   });
 
   const previousAttempts = await prisma.bookingAttempt.findMany({
@@ -256,11 +284,22 @@ export const respondToBooking = async (staffUserId, bookingId, decision) => {
   });
   const excludedStaffIds = previousAttempts.map((a) => a.staffId);
 
-  const nextStaff = await findAvailableStaff(staff.businessId, booking.serviceId, excludedStaffIds, booking.startTime);
+  const nextStaff = await findAvailableStaff(
+    staff.businessId,
+    booking.serviceId,
+    excludedStaffIds,
+    booking.startTime
+  );
 
+  // إذا ما في حلاق بديل -> تحويل لصاحب المحل
   if (!nextStaff) {
-    const updatedBooking = await prisma.booking.update({ where: { id: booking.id }, data: { status: "NEEDS_OWNER" } });
-    const business = await prisma.business.findUnique({ where: { id: staff.businessId } });
+    const updatedBooking = await prisma.booking.update({
+      where: { id: booking.id },
+      data: { status: "NEEDS_OWNER" },
+    });
+    const business = await prisma.business.findUnique({
+      where: { id: staff.businessId },
+    });
 
     await createNotification({
       userId: business.ownerId,
@@ -269,22 +308,39 @@ export const respondToBooking = async (staffUserId, bookingId, decision) => {
       message: `الحلاق "${staff.user.name}" رفض الحجز ولا يوجد حلاق بديل متاح، يرجى الاهتمام بالطلب`,
       data: { bookingId: updatedBooking.id },
     });
+
     await createNotification({
       userId: booking.customerId,
       type: "BOOKING_STATUS_UPDATE",
-      title: "تحديث بخصوص حجزك",
-      message: `الحلاق "${staff.user.name}" غير متوفر حالياً، تم تحويل طلبك لصاحب المحل مباشرة. نحن في الخدمة، يمكنك الانتظار أو إلغاء الحجز`,
+      title: "تحديث بخصوص حجزك 🔔",
+      message: `لم نجد حلاق بديل متاح حالياً، تم تحويل طلبك لصاحب المحل مباشرة للاعتماد.`,
       data: { bookingId: updatedBooking.id },
     });
+
     return updatedBooking;
   }
 
+  // في حال وجود حلاق بديل -> تحويل الحجز له
   await prisma.bookingAttempt.create({
-    data: { bookingId: booking.id, staffId: nextStaff.id, order: currentAttempt.order + 1, status: "PENDING" },
+    data: {
+      bookingId: booking.id,
+      staffId: nextStaff.id,
+      order: currentAttempt.order + 1,
+      status: "PENDING",
+    },
   });
-  const updatedBooking = await prisma.booking.update({ where: { id: booking.id }, data: { staffId: nextStaff.id } });
-  const nextStaffUser = await prisma.user.findUnique({ where: { id: nextStaff.userId } });
-  const business = await prisma.business.findUnique({ where: { id: staff.businessId } });
+
+  const updatedBooking = await prisma.booking.update({
+    where: { id: booking.id },
+    data: { staffId: nextStaff.id },
+  });
+
+  const nextStaffUser = await prisma.user.findUnique({
+    where: { id: nextStaff.userId },
+  });
+  const business = await prisma.business.findUnique({
+    where: { id: staff.businessId },
+  });
 
   await createNotification({
     userId: nextStaff.userId,
@@ -293,6 +349,7 @@ export const respondToBooking = async (staffUserId, bookingId, decision) => {
     message: `تم تحويل حجز من الحلاق "${staff.user.name}" إليك`,
     data: { bookingId: updatedBooking.id },
   });
+
   await createNotification({
     userId: business.ownerId,
     type: "BOOKING_TRANSFERRED",
@@ -300,13 +357,15 @@ export const respondToBooking = async (staffUserId, bookingId, decision) => {
     message: `الحلاق "${staff.user.name}" رفض حجزاً وتم تحويله إلى "${nextStaffUser.name}"`,
     data: { bookingId: updatedBooking.id },
   });
+
   await createNotification({
     userId: booking.customerId,
     type: "BOOKING_STATUS_UPDATE",
-    title: "تحديث بخصوص حجزك",
-    message: `الحلاق "${staff.user.name}" غير متوفر حالياً، تم تحويل طلبك للحلاق "${nextStaffUser.name}". نحن في الخدمة، يمكنك الانتظار أو إلغاء الحجز في أي وقت`,
+    title: "تحديث بخصوص حجزك 🔄",
+    message: `تم تحويل طلب حجزك إلى الحلاق "${nextStaffUser.name}" وبانتظار يمكنك الغاء الحجز اذا لا تريد هذا الحلاق `,
     data: { bookingId: updatedBooking.id },
   });
+
   return updatedBooking;
 };
 
