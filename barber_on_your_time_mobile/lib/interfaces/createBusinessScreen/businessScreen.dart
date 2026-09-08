@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -9,6 +11,106 @@ import '../../models/CreateBusiness/business_model.dart';
 import '../../models/joinBusiness/join_business_model.dart';
 import '../mainScreen.dart';
 
+// ----------------------------------------------------
+// 💡 CustomPainter لرسم مسار الليد المتحرك على الحواف
+// ----------------------------------------------------
+class LedPathBorderPainter extends CustomPainter {
+  final double animationValue;
+  final Color glowColor;
+  final double borderRadius;
+  final double strokeWidth;
+
+  LedPathBorderPainter({
+    required this.animationValue,
+    required this.glowColor,
+    this.borderRadius = 26.0,
+    this.strokeWidth = 2.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final RRect rrect = RRect.fromRectAndRadius(
+      rect,
+      Radius.circular(borderRadius),
+    );
+
+    final basePaint = Paint()
+      ..color = glowColor.withOpacity(0.15)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawRRect(rrect, basePaint);
+
+    final double rotationAngle = animationValue * 2 * math.pi;
+
+    final glowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..shader = SweepGradient(
+        colors: [
+          glowColor.withOpacity(0.0),
+          glowColor,
+          glowColor.withOpacity(0.0),
+        ],
+        stops: const [0.0, 0.25, 0.5],
+        transform: GradientRotation(rotationAngle),
+      ).createShader(rect)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 4);
+
+    canvas.drawRRect(rrect, glowPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant LedPathBorderPainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue ||
+        oldDelegate.glowColor != glowColor;
+  }
+}
+
+// ----------------------------------------------------
+// 💡 الودجت المغلفة للتأثير المساري
+// ----------------------------------------------------
+class LedPathContainer extends StatelessWidget {
+  final Widget child;
+  final AnimationController animationController;
+  final Color glowColor;
+  final double borderRadius;
+
+  const LedPathContainer({
+    super.key,
+    required this.child,
+    required this.animationController,
+    required this.glowColor,
+    this.borderRadius = 26.0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animationController,
+      builder: (context, _) {
+        return CustomPaint(
+          foregroundPainter: LedPathBorderPainter(
+            animationValue: animationController.value,
+            glowColor: glowColor,
+            borderRadius: borderRadius,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.cardColor,
+              borderRadius: BorderRadius.circular(borderRadius),
+            ),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ----------------------------------------------------
+// 📱 الشاشة الرئيسية
+// ----------------------------------------------------
 class BusinessOnboardingScreen extends StatefulWidget {
   const BusinessOnboardingScreen({super.key});
 
@@ -17,8 +119,10 @@ class BusinessOnboardingScreen extends StatefulWidget {
       _BusinessOnboardingScreenState();
 }
 
-class _BusinessOnboardingScreenState extends State<BusinessOnboardingScreen> {
+class _BusinessOnboardingScreenState extends State<BusinessOnboardingScreen>
+    with SingleTickerProviderStateMixin {
   late final PageController _pageController;
+  late final AnimationController _ledPathController;
   double _pageFraction = 0.0;
 
   @override
@@ -30,11 +134,17 @@ class _BusinessOnboardingScreenState extends State<BusinessOnboardingScreen> {
         _pageFraction = _pageController.page ?? 0.0;
       });
     });
+
+    _ledPathController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2500),
+    )..repeat();
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    _ledPathController.dispose();
     super.dispose();
   }
 
@@ -48,41 +158,84 @@ class _BusinessOnboardingScreenState extends State<BusinessOnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
-      appBar: AppBar(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
         backgroundColor: AppColors.backgroundColor,
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          'ابدأ رحلتك',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
+        appBar: AppBar(
+          backgroundColor: AppColors.backgroundColor,
+          elevation: 0,
+          centerTitle: true,
+          title: Text(
+            'ابدأ رحلتك',
+            style: TextStyle(
+              color: AppColors.accentColor,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-      ),
-      body: Column(
-        children: [
-          // شريط التبويبات - ثابت، بيتزامن مع السحب بس نفسه ما بيتحرك
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-            child: _SegmentedTabs(
-              pageFraction: _pageFraction,
-              onTabTap: _goToPage,
+        body: Stack(
+          children: [
+            // ✂️ خلفية أدوات الحلاقة (تم زيادة الوضوح والشفافية)
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.15, // رفع الشفافية لتكون واضحة وممتازة Visual Impact
+                child: Wrap(
+                  spacing: 35,
+                  runSpacing: 40,
+                  alignment: WrapAlignment.spaceAround,
+                  children: List.generate(40, (index) {
+                    final icons = [
+                      Icons.content_cut_rounded, // مقص
+                      Icons.brush_rounded, // فرشاة
+                      Icons.face_rounded, // لحية/وجه
+                      Icons.dry_cleaning_rounded, // أدوات
+                    ];
+                    return Transform.rotate(
+                      angle: (index % 3 == 0) ? 0.3 : -0.4,
+                      child: Icon(
+                        icons[index % icons.length],
+                        size: 46, // تكبير الأيقونات لتبدو أوضح
+                        color: AppColors.accentColor,
+                      ),
+                    );
+                  }),
+                ),
+              ),
             ),
-          ),
 
-          // المحتوى - هو بس القابل للسحب يمين/يسار
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const BouncingScrollPhysics(),
-              children: const [_CreateBusinessForm(), _JoinBusinessForm()],
+            // المحتوى الرئيسي
+            Column(
+              children: [
+                // شريط التبويبات المتزامن مع السحب
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                  child: _SegmentedTabs(
+                    pageFraction: _pageFraction,
+                    onTabTap: _goToPage,
+                  ),
+                ),
+
+                // المحتوى
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const BouncingScrollPhysics(),
+                    children: [
+                      _CreateBusinessForm(
+                        ledAnimationController: _ledPathController,
+                      ),
+                      _JoinBusinessForm(
+                        ledAnimationController: _ledPathController,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -113,7 +266,7 @@ class _SegmentedTabs extends StatelessWidget {
             children: [
               AnimatedPositioned(
                 duration: Duration.zero,
-                left: pageFraction.clamp(0.0, 1.0) * segmentWidth,
+                right: pageFraction.clamp(0.0, 1.0) * segmentWidth,
                 top: 0,
                 bottom: 0,
                 width: segmentWidth,
@@ -122,6 +275,13 @@ class _SegmentedTabs extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.accentColor,
                     borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accentColor.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -172,7 +332,7 @@ class _SegmentedTabs extends StatelessWidget {
                 children: [
                   Icon(
                     icon,
-                    size: 16,
+                    size: 18,
                     color: isActive
                         ? AppColors.backgroundColor
                         : AppColors.textSecondary,
@@ -184,8 +344,8 @@ class _SegmentedTabs extends StatelessWidget {
                       color: isActive
                           ? AppColors.backgroundColor
                           : AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
@@ -199,10 +359,12 @@ class _SegmentedTabs extends StatelessWidget {
 }
 
 // =========================================================
-// فورم إنشاء محل (نفس الفورم القديم، بدون Scaffold خاص فيه)
+// فورم إنشاء محل
 // =========================================================
 class _CreateBusinessForm extends StatefulWidget {
-  const _CreateBusinessForm();
+  final AnimationController ledAnimationController;
+
+  const _CreateBusinessForm({required this.ledAnimationController});
 
   @override
   State<_CreateBusinessForm> createState() => _CreateBusinessFormState();
@@ -269,11 +431,16 @@ class _CreateBusinessFormState extends State<_CreateBusinessForm>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeaderCard(
-                  icon: Icons.add_business_rounded,
-                  title: 'إنشاء محل جديد',
-                  subtitle:
-                      'قم بإدخال تفاصيل صالونك للانتقال إلى حساب OWNER وإدارة المواعيد',
+                LedPathContainer(
+                  animationController: widget.ledAnimationController,
+                  glowColor: AppColors.accentColor,
+                  borderRadius: 26,
+                  child: _buildHeaderCard(
+                    icon: Icons.add_business_rounded,
+                    title: 'إنشاء محل جديد',
+                    subtitle:
+                        'قم بإدخال تفاصيل صالونك للانتقال إلى حساب OWNER وإدارة المواعيد',
+                  ),
                 ),
                 const SizedBox(height: 32),
                 Text(
@@ -305,7 +472,7 @@ class _CreateBusinessFormState extends State<_CreateBusinessForm>
                       : null,
                 ),
                 const SizedBox(height: 36),
-                _buildSubmitButton(
+                _buildOutlinedSubmitButton(
                   isLoading: isLoading,
                   label: 'إنشاء المحل',
                   onPressed: () {
@@ -331,7 +498,9 @@ class _CreateBusinessFormState extends State<_CreateBusinessForm>
 // فورم الانضمام بكود دعوة
 // =========================================================
 class _JoinBusinessForm extends StatefulWidget {
-  const _JoinBusinessForm();
+  final AnimationController ledAnimationController;
+
+  const _JoinBusinessForm({required this.ledAnimationController});
 
   @override
   State<_JoinBusinessForm> createState() => _JoinBusinessFormState();
@@ -396,11 +565,16 @@ class _JoinBusinessFormState extends State<_JoinBusinessForm>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeaderCard(
-                  icon: Icons.badge_rounded,
-                  title: 'انضم كموظف',
-                  subtitle:
-                      'أدخل كود الدعوة يلي أعطاك ياه صاحب المحل للانتقال إلى حساب STAFF',
+                LedPathContainer(
+                  animationController: widget.ledAnimationController,
+                  glowColor: AppColors.accentColor,
+                  borderRadius: 26,
+                  child: _buildHeaderCard(
+                    icon: Icons.badge_rounded,
+                    title: 'انضم كموظف',
+                    subtitle:
+                        'أدخل كود الدعوة يلي أعطاك ياه صاحب المحل للانتقال إلى حساب STAFF',
+                  ),
                 ),
                 const SizedBox(height: 32),
                 Text(
@@ -422,7 +596,7 @@ class _JoinBusinessFormState extends State<_JoinBusinessForm>
                       v == null || v.trim().isEmpty ? 'يرجى إدخال الكود' : null,
                 ),
                 const SizedBox(height: 36),
-                _buildSubmitButton(
+                _buildOutlinedSubmitButton(
                   isLoading: isLoading,
                   label: 'انضمام',
                   onPressed: () {
@@ -444,7 +618,7 @@ class _JoinBusinessFormState extends State<_JoinBusinessForm>
 }
 
 // =========================================================
-// عناصر مشتركة بين الفورمين (نفس ستايل الكود الأصلي)
+// عناصر مشتركة بين الفورمين
 // =========================================================
 Widget _buildHeaderCard({
   required IconData icon,
@@ -454,18 +628,6 @@ Widget _buildHeaderCard({
   return Container(
     width: double.infinity,
     padding: const EdgeInsets.all(24),
-    decoration: BoxDecoration(
-      color: AppColors.cardColor,
-      borderRadius: BorderRadius.circular(26),
-      border: Border.all(color: AppColors.accentColor.withOpacity(0.2)),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.4),
-          blurRadius: 20,
-          offset: const Offset(0, 8),
-        ),
-      ],
-    ),
     child: Column(
       children: [
         Container(
@@ -547,7 +709,7 @@ Widget _buildTextField({
   );
 }
 
-Widget _buildSubmitButton({
+Widget _buildOutlinedSubmitButton({
   required bool isLoading,
   required String label,
   required VoidCallback onPressed,
@@ -555,28 +717,26 @@ Widget _buildSubmitButton({
   return SizedBox(
     width: double.infinity,
     height: 54,
-    child: ElevatedButton(
+    child: OutlinedButton(
       onPressed: isLoading ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.accentColor,
-        disabledBackgroundColor: AppColors.accentColor.withOpacity(0.4),
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: AppColors.accentColor, width: 1.8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        elevation: 5,
-        shadowColor: AppColors.accentColor.withOpacity(0.4),
+        foregroundColor: AppColors.accentColor,
       ),
       child: isLoading
           ? SizedBox(
               width: 24,
               height: 24,
               child: CircularProgressIndicator(
-                color: AppColors.backgroundColor,
+                color: AppColors.accentColor,
                 strokeWidth: 2.5,
               ),
             )
           : Text(
               label,
               style: TextStyle(
-                color: AppColors.backgroundColor,
+                color: AppColors.accentColor,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
