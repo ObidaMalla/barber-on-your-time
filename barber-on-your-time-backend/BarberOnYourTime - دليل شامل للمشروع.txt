@@ -429,3 +429,86 @@ Response: `200` - status → CANCELLED (يشتغل حتى لو الحجز CONFIR
 لو الكود مطابق → الحجز يتحول لـ COMPLETED، ويوصل إشعار للزبون "تم تأكيد اكتمال الخدمة".
 
 هاد التصميم منطقي كتير لأنو الحلاق هو يلي بيقفل العملية، مش الزبون لحاله (وإلا أي زبون كان يقدر يضغط الزر ويقفل الحجز بدون ما ياخد الخدمة فعلياً — والعكس صحيح، منع الحلاق من قفل حجز بدون ما الزبون يعطيه الكود فعلياً يعني أكد حضوره).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1. تسجيل دخول الزبون
+POST https://barber-on-your-time.onrender.com/auth/login
+Body (JSON): { "email": "...", "password": "..." }
+
+احفظ الـ token من الرد → سمّيه customerToken.
+
+2. تسجيل دخول الحلاق
+POST https://barber-on-your-time.onrender.com/auth/login
+Body (JSON): { "email": "...", "password": "..." }
+
+احفظ الـ token → سمّيه staffToken.
+
+3. الزبون يعمل حجز جديد
+POST https://barber-on-your-time.onrender.com/bookings
+Authorization: Bearer customerToken
+Body (JSON):
+{
+  "serviceId": 2,
+  "staffId": 3,
+  "startTime": "2026-09-08T09:00:00.000Z"
+}
+
+⚠️ استخدم وقت ضمن فراغ حقيقي عند هاد الحلاق (رجّع شوف نتيجة GET /availability/staff/3/free-slots).
+
+من الرد، احفظ data.id → هاد هو الـ bookingId يلي رح نستخدمه بكل الخطوات الجاية. سمّيه مثلاً 7 بالأمثلة تحت (بدّلو برقمك الحقيقي).
+
+4. الحلاق يقبل الحجز
+PATCH https://barber-on-your-time.onrender.com/bookings/7/status
+Authorization: Bearer staffToken
+Body (JSON): { "decision": "ACCEPT" }
+
+من الإشعارات (GET /notifications بتوكن الزبون)، احفظ الكود يلي وصل بإشعار "كود تأكيد الخدمة".
+
+5. جرّب تأكيد قبل الموعد (لازم ينرفض)
+POST https://barber-on-your-time.onrender.com/bookings/7/complete
+Authorization: Bearer staffToken
+Body (JSON): { "code": "546581" }
+
+متوقع: 400 "لسا بدري" (إذا وقت الموعد لسا ما اجا).
+
+6. الزبون يضغط "استلمت الخدمة"
+POST https://barber-on-your-time.onrender.com/bookings/7/request-completion
+Authorization: Bearer customerToken
+Body: بدون (خليه none)
+
+متوقع: 200 "تم تنبيه الحلاق"، وبيوصل إشعار جديد للحلاق فيه الكود.
+
+7. تأكد الإشعار وصل للحلاق
+GET https://barber-on-your-time.onrender.com/notifications
+Authorization: Bearer staffToken
+
+متوقع: شوف إشعار جديد نوعو BOOKING_COMPLETION_REQUESTED.
+
+8. الحلاق يدخل الكود الصحيح (بعد ما يوصل وقت الموعد)
+POST https://barber-on-your-time.onrender.com/bookings/7/complete
+Authorization: Bearer staffToken
+Body (JSON): { "code": "546581" }
+
+متوقع: 200، الحجز يصير COMPLETED.
+
+9. تأكد الحالة تغيرت فعلاً
+GET https://barber-on-your-time.onrender.com/bookings/my
+Authorization: Bearer customerToken
+
+متوقع: الحجز رقم 7 حالتو COMPLETED.

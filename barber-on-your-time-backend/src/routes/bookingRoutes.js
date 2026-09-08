@@ -21,4 +21,7 @@ router.get("/staff", protect, listStaffBookings);
 
 router.post("/:bookingId/request-completion", protect, requestCompletion); // الزبون
 router.post("/:bookingId/complete", protect, confirmCompletion);           // الحلاق
+
+
+router.get("/my-stats", protect, getStaffStats);//احصائيات
 export default router;

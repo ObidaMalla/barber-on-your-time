@@ -582,3 +582,78 @@ export const confirmBookingCompletion = async (staffUserId, bookingId, enteredCo
 
   return completedBooking;
 };
+
+
+
+// ===== 8. إحصائيات الحلاق (للـowner) =====
+
+// بيرجع بداية الفترة المطلوبة (بتوقيت سوريا) ونهايتها (هلق)
+const getPeriodBoundsUTC = (period) => {
+  const now = new Date();
+  const { dateStr } = extractDateTimeParts(now); // تاريخ اليوم بتوقيت سوريا
+
+  if (period === "week") {
+    // بداية الأسبوع = يوم الأحد بتوقيت سوريا
+    const todayLocalMidnight = new Date(`${dateStr}T00:00:00+03:00`);
+    const dayOfWeek = new Date(dateStr).getUTCDay(); // 0=أحد
+    const start = new Date(todayLocalMidnight.getTime() - dayOfWeek * 86400000);
+    return { start, end: now };
+  }
+
+  if (period === "month") {
+    const [y, m] = dateStr.split("-");
+    const start = new Date(`${y}-${m}-01T00:00:00+03:00`);
+    return { start, end: now };
+  }
+
+  // all — من بداية الزمن لهلق
+  return { start: new Date(0), end: now };
+};
+
+// بيحسب الإحصائيات الثلاثة لفترة معينة
+const calculateStatsForPeriod = async (staffId, start, end) => {
+  const completedBookings = await prisma.booking.findMany({
+    where: {
+      staffId,
+      status: "COMPLETED",
+      startTime: { gte: start, lte: end },
+    },
+    include: { service: { select: { price: true, durationMinutes: true } } },
+  });
+
+  const totalServices = completedBookings.length;
+  const totalMinutesWorked = completedBookings.reduce(
+    (sum, b) => sum + b.service.durationMinutes,
+    0
+  );
+  const totalRevenue = completedBookings.reduce((sum, b) => sum + b.service.price, 0);
+
+  return {
+    totalServices,
+    totalMinutesWorked,
+    totalHoursWorked: Math.round((totalMinutesWorked / 60) * 100) / 100, // مقرّبة لخانتين عشريتين
+    totalRevenue,
+  };
+};
+
+// API الحلاق: إحصائياته الكاملة (كل الوقت + هالأسبوع + هالشهر)
+export const getMyStats = async (userId) => {
+  const staff = await prisma.staff.findUnique({ where: { userId } });
+  if (!staff) throw new ApiError(403, "لازم تكون حلاق لعرض الإحصائيات");
+
+  const allTime = getPeriodBoundsUTC("all");
+  const thisWeek = getPeriodBoundsUTC("week");
+  const thisMonth = getPeriodBoundsUTC("month");
+
+  const [allTimeStats, weekStats, monthStats] = await Promise.all([
+    calculateStatsForPeriod(staff.id, allTime.start, allTime.end),
+    calculateStatsForPeriod(staff.id, thisWeek.start, thisWeek.end),
+    calculateStatsForPeriod(staff.id, thisMonth.start, thisMonth.end),
+  ]);
+
+  return {
+    allTime: allTimeStats,
+    thisWeek: weekStats,
+    thisMonth: monthStats,
+  };
+};

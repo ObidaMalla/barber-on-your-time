@@ -102,6 +102,7 @@ import {
   getStaffBookings,
   requestServiceCompletion,   // 👈 جديد
   confirmBookingCompletion,   // 👈 جديد
+  getMyStats
 } from "../services/bookingService.js";
 export const requestBooking = asyncHandler(async (req, res) => {
   const customerId = req.user.id;
@@ -170,4 +171,10 @@ export const confirmCompletion = asyncHandler(async (req, res) => {
 
   const booking = await confirmBookingCompletion(staffUserId, Number(bookingId), code);
   return successHandler(res, 200, "تم تأكيد اكتمال الخدمة بنجاح", booking);
+});
+
+export const getStaffStats = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const stats = await getMyStats(userId);
+  return successHandler(res, 200, "إحصائياتك", stats);
 });
