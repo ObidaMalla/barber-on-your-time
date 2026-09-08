@@ -146,6 +146,10 @@ export const createBooking = async (customerId, serviceId, staffId, startTime) =
 
   const service = await prisma.service.findUnique({ where: { id: serviceId } });
   if (!service) throw new ApiError(404, "الخدمة مش موجودة");
+  // 👇 جديد — رفض أي حجز بالماضي من السيرفر نفسو
+  if (parsedStartTime < new Date()) {
+    throw new ApiError(400, "ما فيك تحجز بوقت مضى بالفعل");
+  }
 
   const staff = await prisma.staff.findUnique({ where: { id: staffId } });
   if (!staff || staff.businessId !== service.businessId) {

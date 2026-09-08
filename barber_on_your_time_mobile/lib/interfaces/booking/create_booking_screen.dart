@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -73,12 +75,62 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     }
   }
 
+  void _showPastTimeWarning() {
+    Timer? timer;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        timer = Timer(const Duration(seconds: 3), () {
+          if (Navigator.of(dialogContext).canPop()) {
+            Navigator.of(dialogContext).pop();
+          }
+        });
+
+        return AlertDialog(
+          backgroundColor: AppColors.cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: AppColors.errorColor),
+              const SizedBox(width: 8),
+              Text(
+                'وقت غير صالح',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'ما فيك تحجز بوقت مضى بالفعل. يرجى اختيار تاريخ أو وقت لاحق.',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                timer?.cancel();
+                Navigator.of(dialogContext).pop();
+              },
+              child: Text(
+                'إلغاء',
+                style: TextStyle(color: AppColors.accentColor),
+              ),
+            ),
+          ],
+        );
+      },
+    ).then((_) => timer?.cancel()); // تنظيف المؤقت لو النافذة انقفلت بأي طريقة
+  }
+
   void _submitBooking() {
     if (_selectedServiceId == null) {
       _showSnackBar('يرجى اختيار الخدمة', AppColors.errorColor);
       return;
     }
-
     if (_selectedStaffId == null) {
       _showSnackBar('يرجى اختيار الموظف', AppColors.errorColor);
       return;
@@ -91,6 +143,12 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       _selectedTime.hour,
       _selectedTime.minute,
     );
+
+    // 👇 جديد — التحقق من إنو الموعد مش بالماضي
+    if (bookingDateTime.isBefore(DateTime.now())) {
+      _showPastTimeWarning();
+      return;
+    }
 
     final utcBookingDateTime = bookingDateTime.toUtc();
 
