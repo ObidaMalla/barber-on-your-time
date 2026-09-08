@@ -7,6 +7,7 @@ import {
   listStaffBookings,
   requestCompletion,   // 👈 جديد
   confirmCompletion,   // 👈 جديد
+  getStaffStats
 } from "../controllers/bookingController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
