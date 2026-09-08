@@ -6,7 +6,7 @@ import '../../cubits/bookingCubit/get_staff_bookings_cubit.dart';
 import '../../cubits/results_state.dart';
 import '../../injections/bootStrap/auth/login_injection.dart';
 import '../../models/booking/getStaffBookings/get_staff_bookings_model.dart';
-import 'booking_details_screen.dart';
+import 'bookingDetails/booking_details_screen.dart';
 
 class StaffBookingsScreen extends StatefulWidget {
   const StaffBookingsScreen({super.key});

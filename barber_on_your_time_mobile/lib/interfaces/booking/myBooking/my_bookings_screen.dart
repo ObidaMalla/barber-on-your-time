@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/color/colors.dart';
-import '../../cubits/bookingCubit/cancel_booking_cubit.dart';
-import '../../cubits/bookingCubit/get_my_bookings_cubit.dart';
-import '../../cubits/results_state.dart';
-import '../../injections/bootStrap/auth/login_injection.dart';
-import '../../models/booking/cancelBooking/cancel_booking_model.dart';
-import '../../models/booking/getMyBookings/get_my_bookings_model.dart';
+import '../../../core/color/colors.dart';
+import '../../../cubits/bookingCubit/cancel_booking_cubit.dart';
+import '../../../cubits/bookingCubit/get_my_bookings_cubit.dart';
+import '../../../cubits/results_state.dart';
+import '../../../injections/bootStrap/auth/login_injection.dart';
+import '../../../models/booking/cancelBooking/cancel_booking_model.dart';
+import '../../../models/booking/getMyBookings/get_my_bookings_model.dart';
+import 'booking_details_screen.dart';
 
 class MyBookingsScreen extends StatefulWidget {
   const MyBookingsScreen({super.key});
@@ -90,11 +91,21 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     });
   }
 
-  void _onTapCard(int bookingId) {
+  void _onTapCard(MyBookingData booking) {
     if (_selectedBookingId != null) {
       setState(() {
-        _selectedBookingId = _selectedBookingId == bookingId ? null : bookingId;
+        _selectedBookingId = _selectedBookingId == booking.id
+            ? null
+            : booking.id;
       });
+    } else {
+      // الانتقال إلى واجهة التفاصيل عند الضغط العادي
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BookingDetailsScreen(booking: booking),
+        ),
+      );
     }
   }
 
@@ -162,26 +173,22 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-
       appBar: AppBar(
         backgroundColor: AppColors.backgroundColor,
         elevation: 0,
-
         leading: isSelectionMode
             ? IconButton(
                 icon: Icon(Icons.close, color: AppColors.textPrimary),
                 onPressed: _clearSelection,
               )
             : null,
-
         title: Text(
           isSelectionMode ? 'تم تحديد عنصر' : 'حجوزاتي',
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: AppColors.dangerColor,
             fontWeight: FontWeight.bold,
           ),
         ),
-
         actions: [
           if (isSelectionMode)
             IconButton(
@@ -190,10 +197,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             ),
         ],
       ),
-
       body: BlocListener<CancelBookingCubit, ResultState<CancelBookingModel>>(
         bloc: _cancelCubit,
-
         listener: (context, state) {
           state.whenOrNull(
             loading: () {
@@ -209,28 +214,20 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 },
               );
             },
-
             success: (data) {
               Navigator.pop(context);
-
               _showSnackBar('تم إلغاء الحجز بنجاح', Colors.green);
-
               _clearSelection();
               _cancelCubit.resetState();
-
               _cubit.getMyBookings();
             },
-
             error: (message) {
               Navigator.pop(context);
-
               _showSnackBar(message, AppColors.errorColor);
-
               _cancelCubit.resetState();
             },
           );
         },
-
         child: BlocBuilder<GetMyBookingsCubit, ResultState<GetMyBookingsModel>>(
           bloc: _cubit,
           builder: (context, state) {
@@ -278,9 +275,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 );
               },
               success: (data) {
-                // ============================================
-                // إخفاء الحجوزات الملغاة عن الواجهة
-                // ============================================
                 final bookings = (data.data ?? [])
                     .where((b) => b.status != 'CANCELLED')
                     .toList();
@@ -332,8 +326,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
 
     return GestureDetector(
       onLongPress: bookingId == null ? null : () => _onLongPressCard(bookingId),
-      onTap: bookingId == null ? null : () => _onTapCard(bookingId),
-
+      onTap: () => _onTapCard(booking),
       child: AnimatedBuilder(
         animation: _glowController,
         builder: (context, child) {
@@ -350,16 +343,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                 ),
               ],
             ),
-            // ============================================
-            // IntrinsicHeight بيعطي ارتفاع محدد للـ Row
-            // حتى يشتغل crossAxisAlignment.stretch بشكل صحيح
-            // جوّا ListView (يحل مشكلة الكراش)
-            // ============================================
             child: IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // مساحة التحديد على اليسار
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
                     curve: Curves.easeOut,
@@ -383,7 +370,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                           )
                         : null,
                   ),
-                  // محتوى الكارد
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.all(1.5),
@@ -446,9 +432,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                 ),
                               ],
                             ),
-
                             const SizedBox(height: 10),
-
                             Row(
                               children: [
                                 Icon(
@@ -490,7 +474,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                 ),
                               ],
                             ),
-
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               child: Divider(
@@ -498,7 +481,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                 height: 1,
                               ),
                             ),
-
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -527,7 +509,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                     ),
                                   ],
                                 ),
-
                                 Row(
                                   children: [
                                     Icon(

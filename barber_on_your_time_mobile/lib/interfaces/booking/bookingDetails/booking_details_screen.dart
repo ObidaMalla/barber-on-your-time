@@ -3,12 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../core/color/colors.dart';
-import '../../cubits/bookingCubit/respond_booking_cubit.dart';
-import '../../cubits/results_state.dart';
-import '../../injections/bootStrap/auth/login_injection.dart';
-import '../../models/booking/getStaffBookings/get_staff_bookings_model.dart';
-import '../../models/booking/respondBooking/respond_booking_model.dart';
+import '../../../core/color/colors.dart';
+import '../../../cubits/bookingCubit/respond_booking_cubit.dart';
+import '../../../cubits/results_state.dart';
+import '../../../injections/bootStrap/auth/login_injection.dart';
+import '../../../models/booking/getStaffBookings/get_staff_bookings_model.dart';
+import '../../../models/booking/respondBooking/respond_booking_model.dart';
+import 'CompleteBookingScreen.dart';
 
 enum CountdownPhase { invalid, upcoming, inProgress, finished }
 
@@ -22,15 +23,14 @@ class BookingDetailsScreen extends StatefulWidget {
 }
 
 class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
-  late final RespondBookingCubit _cubit;
+  late final RespondBookingCubit _respondCubit;
 
   Timer? _countdownTimer;
-
   Duration _remainingTime = Duration.zero;
-
   bool _isValidStartTime = true;
-
   CountdownPhase _countdownPhase = CountdownPhase.invalid;
+
+  bool _canEnterCode = false;
 
   static const List<String> _dayNames = [
     'الإثنين',
@@ -60,27 +60,31 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   @override
   void initState() {
     super.initState();
-
-    _cubit = getIt<RespondBookingCubit>();
-
+    _respondCubit = getIt<RespondBookingCubit>();
     _startCountdown();
   }
 
-  // ============================================================
-  // Countdown
-  // ============================================================
-
   void _startCountdown() {
-    // تحديث مباشر عند فتح الشاشة
     _updateRemainingTime();
-
-    // تحديث مستمر كل ثانية
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _updateRemainingTime();
     });
   }
 
   void _updateRemainingTime() {
+    // إذا كانت حالة الحجز مكتملة مسبقاً، يتم توقيف العداد فوراً
+    if (widget.booking.status == 'COMPLETED') {
+      _countdownTimer?.cancel();
+      if (!mounted) return;
+      setState(() {
+        _isValidStartTime = true;
+        _countdownPhase = CountdownPhase.finished;
+        _remainingTime = Duration.zero;
+        _canEnterCode = false;
+      });
+      return;
+    }
+
     final rawStartTime = widget.booking.startTime;
 
     if (rawStartTime == null || rawStartTime.trim().isEmpty) {
@@ -89,11 +93,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         _isValidStartTime = false;
         _countdownPhase = CountdownPhase.invalid;
         _remainingTime = Duration.zero;
+        _canEnterCode = false;
       });
       return;
     }
 
-    // 1. ضمان معالجة النص وتأكيده كـ UTC بإضافة Z إذا لم تكن موجودة
     String formattedIso = rawStartTime.trim().replaceAll(' ', 'T');
     if (!formattedIso.endsWith('Z') && !formattedIso.contains('+')) {
       formattedIso += 'Z';
@@ -107,21 +111,23 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         _isValidStartTime = false;
         _countdownPhase = CountdownPhase.invalid;
         _remainingTime = Duration.zero;
+        _canEnterCode = false;
       });
       return;
     }
 
-    // 2. التحويل الصريح للـ UTC
     final startUtc = parsedStartTime.toUtc();
     final nowUtc = DateTime.now().toUtc();
-
     final durationMinutes = widget.booking.service?.durationMinutes ?? 0;
     final endUtc = startUtc.add(Duration(minutes: durationMinutes));
+
+    final halfTimeUtc = startUtc.add(
+      Duration(minutes: (durationMinutes / 2).round()),
+    );
 
     CountdownPhase phase;
     Duration remaining;
 
-    // 3. المقارنة بناءً على التوقيت العالمي UTC
     if (nowUtc.isBefore(startUtc)) {
       phase = CountdownPhase.upcoming;
       remaining = startUtc.difference(nowUtc);
@@ -134,39 +140,30 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       _countdownTimer?.cancel();
     }
 
+    final reachedHalfTime =
+        nowUtc.isAfter(halfTimeUtc) || nowUtc.isAtSameMomentAs(halfTimeUtc);
+    final showCodeIcon = reachedHalfTime;
+
     if (!mounted) return;
 
     setState(() {
       _isValidStartTime = true;
       _countdownPhase = phase;
       _remainingTime = remaining;
+      _canEnterCode = showCodeIcon;
     });
   }
 
-  // ============================================================
-  // تحويل وقت الحجز للعرض المحلي
-  // ============================================================
-
   DateTime? _getLocalBookingDate() {
     final rawStartTime = widget.booking.startTime;
-
-    if (rawStartTime == null || rawStartTime.trim().isEmpty) {
-      return null;
-    }
+    if (rawStartTime == null || rawStartTime.trim().isEmpty) return null;
 
     String formattedIso = rawStartTime.trim().replaceAll(' ', 'T');
     if (!formattedIso.endsWith('Z') && !formattedIso.contains('+')) {
       formattedIso += 'Z';
     }
 
-    final parsed = DateTime.tryParse(formattedIso);
-
-    if (parsed == null) {
-      return null;
-    }
-
-    // UTC → Local للعرض فقط
-    return parsed.toLocal();
+    return DateTime.tryParse(formattedIso)?.toLocal();
   }
 
   @override
@@ -175,24 +172,17 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     super.dispose();
   }
 
-  // ============================================================
-  // Status
-  // ============================================================
-
   Color _statusColor(String? status) {
     switch (status) {
       case 'CONFIRMED':
+      case 'COMPLETED':
         return AppColors.successColor;
-
       case 'PENDING':
         return Colors.orange;
-
       case 'NEEDS_OWNER':
         return AppColors.accentColor;
-
       case 'CANCELLED':
         return AppColors.errorColor;
-
       default:
         return AppColors.textSecondary;
     }
@@ -202,25 +192,18 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     switch (status) {
       case 'CONFIRMED':
         return 'مؤكد';
-
+      case 'COMPLETED':
+        return 'مكتمل';
       case 'PENDING':
         return 'بانتظار الرد';
-
       case 'NEEDS_OWNER':
         return 'يحتاج تدخل المدير';
-
       case 'CANCELLED':
         return 'ملغي';
-
       default:
         return status ?? '';
     }
   }
-
-  // ============================================================
-  // Countdown Parts (بدل نص واحد مدمج، منبني كل جزء كـ Widget مستقل
-  // لتفادي مشكلة إعادة ترتيب الأرقام جوه النص العربي RTL)
-  // ============================================================
 
   List<_TimePart> _remainingTimeParts() {
     final days = _remainingTime.inDays;
@@ -229,7 +212,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     final seconds = _remainingTime.inSeconds.remainder(60);
 
     final List<_TimePart> parts = [];
-
     if (days > 0) parts.add(_TimePart(days, 'يوم'));
     if (hours > 0) parts.add(_TimePart(hours, 'ساعة'));
     if (minutes > 0) parts.add(_TimePart(minutes, 'دقيقة'));
@@ -238,40 +220,43 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     return parts;
   }
 
-  // ============================================================
-  // Countdown Subtitle
-  // ============================================================
-
   String _countdownSubtitle() {
     switch (_countdownPhase) {
       case CountdownPhase.upcoming:
         return 'متبقي حتى بدء الحجز';
-
       case CountdownPhase.inProgress:
         return 'متبقي حتى انتهاء الحجز';
-
       case CountdownPhase.finished:
         return 'انتهى موعد الحجز';
-
       case CountdownPhase.invalid:
         return 'تعذر قراءة وقت الحجز';
     }
   }
 
-  // ============================================================
-  // Respond
-  // ============================================================
-
   void _respond(String decision) {
-    _cubit.respondToBooking(
+    _respondCubit.respondToBooking(
       bookingId: widget.booking.id ?? 0,
       decision: decision,
     );
   }
 
-  // ============================================================
-  // Build
-  // ============================================================
+  void _navigateToCompleteBookingScreen() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            CompleteBookingScreen(bookingId: widget.booking.id ?? 0),
+      ),
+    );
+
+    if (result == true && mounted) {
+      setState(() {
+        widget.booking.status = 'COMPLETED';
+        _canEnterCode = false;
+        _updateRemainingTime(); // إعادة ضبط الواجهة فور العودة بالحالة الجديدة
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -281,7 +266,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     final isPending = booking.status == 'PENDING';
 
     return BlocProvider.value(
-      value: _cubit,
+      value: _respondCubit,
       child: BlocConsumer<RespondBookingCubit, ResultState<RespondBookingModel>>(
         listener: (context, state) {
           state.whenOrNull(
@@ -292,7 +277,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                   backgroundColor: AppColors.successColor,
                 ),
               );
-
               Navigator.pop(context, true);
             },
             error: (message) {
@@ -320,11 +304,20 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               title: Text(
                 'تفاصيل الحجز',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.dangerColor,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
               ),
+              actions: [
+                if (_canEnterCode)
+                  IconButton(
+                    icon: const Icon(Icons.qr_code_scanner_rounded),
+                    color: AppColors.accentColor,
+                    tooltip: 'إدخال كود الإكمال',
+                    onPressed: _navigateToCompleteBookingScreen,
+                  ),
+              ],
             ),
             body: SafeArea(
               child: SingleChildScrollView(
@@ -336,9 +329,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // ==================================================
-                    // بطاقة الحالة
-                    // ==================================================
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -365,12 +355,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
-                    // ==================================================
-                    // بطاقة التاريخ والوقت
-                    // ==================================================
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -407,19 +392,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                               ],
                             ),
                     ),
-
                     const SizedBox(height: 16),
-
-                    // ==================================================
-                    // Countdown Card
-                    // ==================================================
                     _buildCountdownCard(),
-
                     const SizedBox(height: 24),
-
-                    // ==================================================
-                    // العميل
-                    // ==================================================
                     Text(
                       'العميل',
                       style: TextStyle(
@@ -428,9 +403,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
                     const SizedBox(height: 12),
-
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -482,12 +455,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
-                    // ==================================================
-                    // الخدمة
-                    // ==================================================
                     Text(
                       'الخدمة',
                       style: TextStyle(
@@ -496,9 +464,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
                     const SizedBox(height: 12),
-
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -556,10 +522,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         ],
                       ),
                     ),
-
-                    // ==================================================
-                    // أزرار القبول والرفض
-                    // ==================================================
                     if (isPending) ...[
                       const SizedBox(height: 36),
                       Row(
@@ -635,28 +597,32 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     );
   }
 
-  // ============================================================
-  // Countdown Card
-  // ============================================================
-
   Widget _buildCountdownCard() {
+    final isCompleted = widget.booking.status == 'COMPLETED';
     final hasInvalidTime = _countdownPhase == CountdownPhase.invalid;
     final isInProgress = _countdownPhase == CountdownPhase.inProgress;
     final isFinished = _countdownPhase == CountdownPhase.finished;
 
-    final countdownColor = hasInvalidTime
-        ? AppColors.errorColor
-        : isInProgress || isFinished
+    final countdownColor = (isCompleted || isInProgress || isFinished)
         ? AppColors.successColor
+        : hasInvalidTime
+        ? AppColors.errorColor
         : AppColors.accentColor;
 
-    final countdownIcon = hasInvalidTime
-        ? Icons.error_outline_rounded
-        : isFinished
+    final countdownIcon = (isCompleted || isFinished)
         ? Icons.check_circle_outline_rounded
+        : hasInvalidTime
+        ? Icons.error_outline_rounded
         : isInProgress
         ? Icons.play_circle_outline_rounded
         : Icons.timer_outlined;
+
+    // تغيير العنوان بما يناسب حالة الحجز
+    final titleText = isCompleted
+        ? 'حالة الخدمة'
+        : isFinished
+        ? 'حالة الموعد'
+        : 'الوقت المتبقي';
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -671,7 +637,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           Icon(countdownIcon, color: countdownColor, size: 30),
           const SizedBox(height: 10),
           Text(
-            'الوقت المتبقي',
+            titleText,
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 12,
@@ -680,22 +646,18 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           ),
           const SizedBox(height: 8),
           _buildRemainingTimeDisplay(countdownColor),
-          const SizedBox(height: 4),
-          Text(
-            _countdownSubtitle(),
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
-          ),
+          if (!isCompleted) ...[
+            const SizedBox(height: 4),
+            Text(
+              _countdownSubtitle(),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+            ),
+          ],
         ],
       ),
     );
   }
-
-  // ============================================================
-  // Remaining Time Display
-  // كل جزء (رقم + وحدة) Widget مستقل بترتيب صريح، مش نص عربي مدمج
-  // فيه أرقام لاتينية — هيك ما ينعكس ترتيب الأرقام بسبب bidi.
-  // ============================================================
 
   Widget _buildRemainingTimeDisplay(Color countdownColor) {
     if (!_isValidStartTime) {
@@ -705,6 +667,18 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         style: TextStyle(
           color: countdownColor,
           fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+    }
+
+    if (widget.booking.status == 'COMPLETED') {
+      return Text(
+        'تم تقديم الخدمة',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: AppColors.successColor,
+          fontSize: 22,
           fontWeight: FontWeight.bold,
         ),
       );
@@ -723,7 +697,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     }
 
     final parts = _remainingTimeParts();
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -736,8 +709,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 
   Widget _buildTimePartRow(_TimePart part, Color countdownColor) {
-    // Row بترتيب widgets صريح (مش نص مدمج) لضمان إن الرقم يطلع
-    // قبل الوحدة بصريًا بغض النظر عن اتجاه النص الطاغي بالتطبيق.
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
@@ -762,10 +733,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       ],
     );
   }
-
-  // ============================================================
-  // Date Chip
-  // ============================================================
 
   Widget _buildDateChip({
     required IconData icon,
@@ -798,12 +765,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 }
 
-// ============================================================
-// نموذج بسيط لتمثيل جزء واحد من الوقت المتبقي (رقم + وحدة)
-// ============================================================
 class _TimePart {
   final int value;
   final String unit;
-
   const _TimePart(this.value, this.unit);
 }

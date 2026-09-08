@@ -13,9 +13,11 @@ import 'cubits/availabilityCubit/staff_free_slots_cubit.dart';
 import 'cubits/availabilityOwnerCubit/answer_request_cubit.dart';
 import 'cubits/availabilityOwnerCubit/owner_pending_requests_cubit.dart';
 import 'cubits/bookingCubit/cancel_booking_cubit.dart';
+import 'cubits/bookingCubit/complete_booking_cubit.dart';
 import 'cubits/bookingCubit/create_booking_cubit.dart';
 import 'cubits/bookingCubit/get_my_bookings_cubit.dart';
 import 'cubits/bookingCubit/get_staff_bookings_cubit.dart';
+import 'cubits/bookingCubit/request_completion_cubit.dart';
 import 'cubits/bookingCubit/respond_booking_cubit.dart';
 import 'cubits/businessCubit/business_cubit.dart';
 import 'cubits/businessCubit/business_get_all_staff_cubit.dart';
@@ -161,6 +163,12 @@ class MyApp extends StatelessWidget {
         BlocProvider<FreeSlotsCubit>(create: (_) => getIt<FreeSlotsCubit>()),
         BlocProvider<StaffFreeSlotsCubit>(
           create: (_) => getIt<StaffFreeSlotsCubit>(),
+        ),
+        BlocProvider<RequestCompletionCubit>(
+          create: (_) => getIt<RequestCompletionCubit>(),
+        ),
+        BlocProvider<CompleteBookingCubit>(
+          create: (_) => getIt<CompleteBookingCubit>(),
         ),
       ],
       child: MaterialApp(

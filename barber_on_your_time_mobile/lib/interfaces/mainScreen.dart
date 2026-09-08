@@ -6,7 +6,7 @@ import 'Profile/ProfileScreen.dart';
 import 'availability/freeSlots/freeSlotsScreen.dart';
 import 'availability/get_availability_screen.dart';
 import 'booking/businesses_list_screen.dart';
-import 'booking/my_bookings_screen.dart';
+import 'booking/myBooking/my_bookings_screen.dart';
 import 'booking/staff_bookings_screen.dart';
 import 'createBusinessScreen/GetStaffScreen.dart';
 import 'createBusinessScreen/businessScreen.dart';

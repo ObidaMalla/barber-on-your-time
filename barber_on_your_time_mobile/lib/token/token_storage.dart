@@ -25,4 +25,15 @@ class TokenStorage {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('user_role');
   }
+
+  // --- حفظ واسترجاع حالة طلب التنبيه للحجز ---
+  static Future<void> saveCompletionRequested(int bookingId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('requested_completion_$bookingId', true);
+  }
+
+  static Future<bool> isCompletionRequested(int bookingId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('requested_completion_$bookingId') ?? false;
+  }
 }

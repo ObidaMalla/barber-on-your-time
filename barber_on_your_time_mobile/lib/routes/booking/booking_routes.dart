@@ -3,9 +3,11 @@ import 'package:retrofit/retrofit.dart';
 
 import '../../core/constants/api_constants.dart';
 import '../../models/booking/cancelBooking/cancel_booking_model.dart';
+import '../../models/booking/completeBooking/complete_booking_model.dart';
 import '../../models/booking/createBooking/create_booking_model.dart';
 import '../../models/booking/getMyBookings/get_my_bookings_model.dart';
 import '../../models/booking/getStaffBookings/get_staff_bookings_model.dart';
+import '../../models/booking/requestCompletion/request_completion_model.dart';
 import '../../models/booking/respondBooking/respond_booking_model.dart';
 
 part 'booking_routes.g.dart';
@@ -32,4 +34,15 @@ abstract class BookingService {
 
   @DELETE('/bookings/{bookingId}')
   Future<CancelBookingModel> cancelBooking(@Path('bookingId') int bookingId);
+
+  @POST('/bookings/{bookingId}/request-completion')
+  Future<RequestCompletionModel> requestCompletion(
+    @Path('bookingId') int bookingId,
+  );
+
+  @POST('/bookings/{bookingId}/complete')
+  Future<CompleteBookingModel> completeBooking(
+    @Path('bookingId') int bookingId,
+    @Body() Map<String, dynamic> body,
+  );
 }
