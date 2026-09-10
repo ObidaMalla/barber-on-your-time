@@ -27,6 +27,8 @@ import 'cubits/businessCubit/get_staff_by_business_id_cubit.dart';
 import 'cubits/joinBusinessCubit/join_business_cubit.dart';
 import 'cubits/loginCubit/login_cubit.dart';
 import 'cubits/logoutCubit/logout_cubit.dart';
+import 'cubits/notifications/notifications_list_cubit.dart';
+import 'cubits/notifications/unread_count_cubit.dart';
 import 'cubits/profileCubit/profile_cubit.dart';
 import 'cubits/profileCubit/updateDataProfileCubit/update_data_profile_cubit.dart';
 import 'cubits/profileCubit/updatePasswordProfileCubit/update_password_cubit.dart';
@@ -169,6 +171,12 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<CompleteBookingCubit>(
           create: (_) => getIt<CompleteBookingCubit>(),
+        ),
+        BlocProvider<UnreadCountCubit>(
+          create: (_) => getIt<UnreadCountCubit>(),
+        ),
+        BlocProvider<NotificationsListCubit>(
+          create: (_) => getIt<NotificationsListCubit>(),
         ),
       ],
       child: MaterialApp(

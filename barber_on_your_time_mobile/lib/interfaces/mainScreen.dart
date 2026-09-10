@@ -10,7 +10,6 @@ import 'booking/myBooking/my_bookings_screen.dart';
 import 'booking/staff_bookings_screen.dart';
 import 'createBusinessScreen/GetStaffScreen.dart';
 import 'createBusinessScreen/businessScreen.dart';
-import 'homePage/homePageScreen.dart';
 import 'ownerRequests/owner_pending_requests_screen.dart';
 import 'services/get_services_screen.dart';
 
@@ -52,8 +51,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     // ============================================================
 
     _pages = [
-      // OWNER
-      if (widget.userRole == 'OWNER') const HomeScreen(),
+      // OWNER - الواجهة الأولى أصبحت الخدمات بدلاً من الرئيسية
+      if (widget.userRole == 'OWNER') const GetServicesScreen(),
 
       // STAFF
       if (widget.userRole == 'STAFF') const StaffBookingsScreen(),
@@ -62,16 +61,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       if (widget.userRole == 'CUSTOMER') const MyBookingsScreen(),
 
       // OWNER
-      if (widget.userRole == 'OWNER') const GetServicesScreen(),
-
       if (widget.userRole == 'OWNER') const OwnerPendingRequestsScreen(),
 
       if (widget.userRole == 'OWNER') const GetStaffScreen(),
 
       // STAFF
       if (widget.userRole == 'STAFF') const GetAvailabilityScreen(),
-      if (widget.userRole == 'STAFF')
-        const FreeSlotsScreen(), // 👈 إضافة الشاشة هنا بعد أوقاتي
+      if (widget.userRole == 'STAFF') const FreeSlotsScreen(),
+
       // CUSTOMER
       if (widget.userRole == 'CUSTOMER') const BusinessesListScreen(),
 
@@ -86,21 +83,15 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     // ============================================================
 
     _navItems = [
-      // FIRST
+      // FIRST (OWNER = الخدمات)
       _NavItemData(
         icon: widget.userRole == 'OWNER'
-            ? Icons.home_rounded
+            ? Icons.cleaning_services_rounded
             : Icons.calendar_month_rounded,
-        label: widget.userRole == 'OWNER' ? 'الرئيسية' : 'حجوزاتي',
+        label: widget.userRole == 'OWNER' ? 'الخدمات' : 'حجوزاتي',
       ),
 
       // OWNER
-      if (widget.userRole == 'OWNER')
-        const _NavItemData(
-          icon: Icons.cleaning_services_rounded,
-          label: 'الخدمات',
-        ),
-
       if (widget.userRole == 'OWNER')
         const _NavItemData(
           icon: Icons.pending_actions_rounded,
@@ -120,7 +111,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       if (widget.userRole == 'STAFF')
         const _NavItemData(
           icon: Icons.event_available_rounded,
-          label: 'المتاحة', // 👈 إضافة التبويب في الشريط السفلي
+          label: 'المتاحة',
         ),
 
       // CUSTOMER

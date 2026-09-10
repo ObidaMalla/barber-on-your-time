@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/color/colors.dart';
+import '../../core/notification_bell_icon.dart';
 import '../../token/token_customer.dart';
 import '../login/loginScreen.dart';
 
@@ -24,6 +25,7 @@ class HomeScreen extends StatelessWidget {
         backgroundColor: AppColors.barberRed,
         elevation: 0,
         actions: [
+          const NotificationBellIcon(), // 👈 جديد — أيقونة الجرس مع الـ badge
           IconButton(
             icon: Icon(Icons.logout, color: AppColors.textSecondary),
             onPressed: () => _tempLogout(context),

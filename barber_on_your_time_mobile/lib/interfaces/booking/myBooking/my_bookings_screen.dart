@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/color/colors.dart';
+import '../../../core/notification_bell_icon.dart';
 import '../../../cubits/bookingCubit/cancel_booking_cubit.dart';
 import '../../../cubits/bookingCubit/get_my_bookings_cubit.dart';
 import '../../../cubits/results_state.dart';
@@ -190,6 +191,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
           ),
         ),
         actions: [
+          const NotificationBellIcon(), // 👈 جديد — أيقونة الجرس مع الـ badge
           if (isSelectionMode)
             IconButton(
               icon: Icon(Icons.delete_outline, color: AppColors.errorColor),

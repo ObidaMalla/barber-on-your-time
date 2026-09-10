@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/color/colors.dart';
+import '../../core/notification_bell_icon.dart';
 import '../../cubits/bookingCubit/get_staff_bookings_cubit.dart';
 import '../../cubits/results_state.dart';
 import '../../injections/bootStrap/auth/login_injection.dart';
@@ -76,7 +77,7 @@ class _StaffBookingsScreenState extends State<StaffBookingsScreen> {
         elevation: 0,
         centerTitle: true,
         title: Text(
-          'حجوزاتي',
+          'حجوزات العملاء',
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 18,
@@ -84,6 +85,7 @@ class _StaffBookingsScreenState extends State<StaffBookingsScreen> {
           ),
         ),
         actions: [
+          const NotificationBellIcon(), // 👈 جديد — أيقونة الجرس مع الـ badge
           IconButton(
             onPressed: () => _cubit.fetchStaffBookings(),
             icon: Icon(Icons.refresh_rounded, color: AppColors.accentColor),

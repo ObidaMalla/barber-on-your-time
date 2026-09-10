@@ -7,6 +7,7 @@ import 'availability/_availability_feature_injection.dart';
 import 'availability_owner/_availability_owner_feature_injection.dart';
 import 'booking/_booking_feature_injection.dart';
 import 'business/_business_feature_injection.dart';
+import 'notifications/notifications_injection.dart';
 
 void setupDependencies() {
   initAuthFeature();
@@ -16,4 +17,5 @@ void setupDependencies() {
   initAvailabilityFeature();
   initAvailabilityOwnerFeature();
   initBookingFeature();
+  initGetItNotifications();
 }

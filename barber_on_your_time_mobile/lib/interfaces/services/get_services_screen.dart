@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/color/colors.dart';
 import '../../../cubits/results_state.dart';
 import '../../../main.dart';
+import '../../core/notification_bell_icon.dart';
 import '../../cubits/servicesCubit/get_services_cubit.dart';
 import '../../models/services/getServices/get_services_model.dart';
 import '../../repo/response_services/delete_service_repo.dart';
@@ -376,6 +377,7 @@ class _GetServicesScreenState extends State<GetServicesScreen> {
       ),
       centerTitle: true,
       actions: [
+        const NotificationBellIcon(), // 👈 جديد — أيقونة الجرس مع الـ badge
         IconButton(
           onPressed: () => _getServicesCubit.fetchServices(),
           icon: Icon(Icons.refresh_rounded, color: AppColors.accentColor),
