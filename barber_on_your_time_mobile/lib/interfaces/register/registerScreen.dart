@@ -75,7 +75,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               Icon(
                 isSuccess ? Icons.check_circle_outline : Icons.error_outline,
                 color: Colors.white,
-                size: 22,
+                size: 24,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -83,7 +83,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                   message,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -95,13 +95,49 @@ class _RegisterScreenState extends State<RegisterScreen>
               : AppColors.dangerColor,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
           duration: const Duration(seconds: 3),
         ),
       );
+  }
+
+  InputDecoration _inputDecoration({
+    required String hint,
+    required IconData icon,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: AppColors.hintColor, fontSize: 15),
+      prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 24),
+      suffixIcon: suffixIcon,
+      filled: true,
+      fillColor: AppColors.inputColor,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: AppColors.borderColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: AppColors.borderColor),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: accentColor, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: AppColors.errorColor),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: AppColors.errorColor, width: 2),
+      ),
+    );
   }
 
   @override
@@ -112,7 +148,6 @@ class _RegisterScreenState extends State<RegisterScreen>
         backgroundColor: AppColors.backgroundColor,
         resizeToAvoidBottomInset: true,
         body: BlocConsumer<RegisterCubit, ResultState<RegisterModel>>(
-          // LISTENER
           listener: (context, state) {
             state.whenOrNull(
               success: (userData) async {
@@ -132,7 +167,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                 if (!mounted) return;
                 Navigator.pop(context);
               },
-              // ERROR
               error: (error) {
                 debugPrint('❌ [RegisterScreen] $error');
                 _showFloatingSnackBar(error, isSuccess: false);
@@ -140,485 +174,328 @@ class _RegisterScreenState extends State<RegisterScreen>
               },
             );
           },
-          // BUILDER
           builder: (context, state) {
             final isLoading = state.maybeWhen(
               loading: () => true,
               orElse: () => false,
             );
-            return SafeArea(
-              child: GestureDetector(
-                onTap: () {
-                  FocusScope.of(context).unfocus();
-                },
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SingleChildScrollView(
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: const Alignment(0, -0.6),
+                        radius: 1.2,
+                        colors: [
+                          accentColor.withOpacity(0.12),
+                          AppColors.backgroundColor,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SafeArea(
+                  child: GestureDetector(
+                    onTap: () {
+                      FocusScope.of(context).unfocus();
+                    },
+                    child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
-                        vertical: 28,
+                        vertical: 24,
                       ),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          minHeight: constraints.maxHeight - 56,
-                        ),
-                        child: IntrinsicHeight(
-                          child: Column(
-                            children: [
-                              const Spacer(),
-                              // LOGO
-                              Container(
-                                width: 92,
-                                height: 92,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: AppColors.cardColor,
-                                  border: Border.all(
-                                    color: accentColor.withOpacity(0.35),
-                                    width: 1.5,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: accentColor.withOpacity(0.18),
-                                      blurRadius: 30,
-                                      spreadRadius: 2,
-                                    ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 16),
+                          // LOGO
+                          Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.cardColor,
+                              border: Border.all(
+                                color: accentColor.withOpacity(0.35),
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: accentColor.withOpacity(0.18),
+                                  blurRadius: 24,
+                                  spreadRadius: 3,
+                                ),
+                              ],
+                            ),
+                            child: Container(
+                              margin: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    accentColor,
+                                    accentColor.withOpacity(0.7),
                                   ],
                                 ),
-                                child: Container(
-                                  margin: const EdgeInsets.all(9),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        accentColor,
-                                        accentColor.withOpacity(0.7),
-                                      ],
-                                    ),
-                                  ),
-                                  child: Icon(
-                                    Icons.content_cut_rounded,
-                                    color: AppColors.backgroundColor,
-                                    size: 42,
-                                  ),
-                                ),
                               ),
-                              const SizedBox(height: 24),
-                              // TITLE
-                              Text(
-                                'إنشاء حساب جديد',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.5,
-                                ),
+                              child: Icon(
+                                Icons.content_cut_rounded,
+                                color: AppColors.backgroundColor,
+                                size: 46,
                               ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // TITLE
+                          Text(
+                            'إنشاء حساب جديد',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'سجل لتبدأ استخدام تطبيقنا',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
 
-                              const SizedBox(height: 8),
-
-                              Text(
-                                'سجل لتبدأ استخدام تطبيقنا',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
+                          // REGISTER CARD WITH BORDER BEAM
+                          AnimatedBuilder(
+                            animation: _ledController,
+                            builder: (context, child) {
+                              return CustomPaint(
+                                painter: _BorderBeamPainter(
+                                  animationValue: _ledController.value,
+                                  color: accentColor,
+                                  borderRadius: 28.0,
                                 ),
-                              ),
-                              const SizedBox(height: 34),
-
-                              // REGISTER CARD WITH BORDER BEAM
-                              AnimatedBuilder(
-                                animation: _ledController,
-                                builder: (context, child) {
-                                  return CustomPaint(
-                                    painter: _BorderBeamPainter(
-                                      animationValue: _ledController.value,
-                                      color: accentColor,
-                                      borderRadius: 24.0,
-                                    ),
-                                    child: child,
-                                  );
-                                },
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(22),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.cardColor,
-                                    borderRadius: BorderRadius.circular(24),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.30),
-                                        blurRadius: 30,
-                                        offset: const Offset(0, 15),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Form(
-                                    key: _formKey,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.stretch,
-                                      children: [
-                                        // NAME
-                                        Text(
-                                          'الاسم الكامل',
-                                          style: TextStyle(
-                                            color: AppColors.textPrimary,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 9),
-                                        TextFormField(
-                                          controller: _nameController,
-                                          textInputAction: TextInputAction.next,
-                                          style: TextStyle(
-                                            color: AppColors.textPrimary,
-                                            fontSize: 14,
-                                          ),
-                                          cursorColor: accentColor,
-                                          validator: (value) {
-                                            if (value == null ||
-                                                value.trim().isEmpty) {
-                                              return 'يرجى إدخال الاسم الكامل';
-                                            }
-                                            return null;
-                                          },
-                                          decoration: InputDecoration(
-                                            hintText: 'أدخل اسمك الكامل',
-                                            hintStyle: TextStyle(
-                                              color: AppColors.hintColor,
-                                              fontSize: 14,
-                                            ),
-                                            prefixIcon: Icon(
-                                              Icons.person_outline,
-                                              color: AppColors.textSecondary,
-                                              size: 21,
-                                            ),
-                                            filled: true,
-                                            fillColor: AppColors.inputColor,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 17,
-                                                ),
-                                            border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              borderSide: BorderSide(
-                                                color: AppColors.borderColor,
-                                              ),
-                                            ),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              borderSide: BorderSide(
-                                                color: AppColors.borderColor,
-                                              ),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              borderSide: BorderSide(
-                                                color: accentColor,
-                                                width: 1.5,
-                                              ),
-                                            ),
-                                            errorBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              borderSide: BorderSide(
-                                                color: AppColors.errorColor,
-                                              ),
-                                            ),
-                                            focusedErrorBorder:
-                                                OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(14),
-                                                  borderSide: BorderSide(
-                                                    color: AppColors.errorColor,
-                                                    width: 1.5,
-                                                  ),
-                                                ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 20),
-                                        // EMAIL
-                                        Text(
-                                          'البريد الإلكتروني',
-                                          style: TextStyle(
-                                            color: AppColors.textPrimary,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 9),
-                                        TextFormField(
-                                          controller: _emailController,
-                                          keyboardType:
-                                              TextInputType.emailAddress,
-                                          textInputAction: TextInputAction.next,
-                                          style: TextStyle(
-                                            color: AppColors.textPrimary,
-                                            fontSize: 14,
-                                          ),
-                                          cursorColor: accentColor,
-                                          validator: (value) {
-                                            if (value == null ||
-                                                value.trim().isEmpty) {
-                                              return 'يرجى إدخال البريد الإلكتروني';
-                                            }
-                                            if (!RegExp(
-                                              r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$',
-                                            ).hasMatch(value.trim())) {
-                                              return 'يرجى إدخال بريد إلكتروني صالح';
-                                            }
-                                            return null;
-                                          },
-                                          decoration: InputDecoration(
-                                            hintText: 'أدخل بريدك الإلكتروني',
-                                            hintStyle: TextStyle(
-                                              color: AppColors.hintColor,
-                                              fontSize: 14,
-                                            ),
-                                            prefixIcon: Icon(
-                                              Icons.email_outlined,
-                                              color: AppColors.textSecondary,
-                                              size: 21,
-                                            ),
-                                            filled: true,
-                                            fillColor: AppColors.inputColor,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 17,
-                                                ),
-                                            border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              borderSide: BorderSide(
-                                                color: AppColors.borderColor,
-                                              ),
-                                            ),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              borderSide: BorderSide(
-                                                color: AppColors.borderColor,
-                                              ),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              borderSide: BorderSide(
-                                                color: accentColor,
-                                                width: 1.5,
-                                              ),
-                                            ),
-                                            errorBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              borderSide: BorderSide(
-                                                color: AppColors.errorColor,
-                                              ),
-                                            ),
-                                            focusedErrorBorder:
-                                                OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(14),
-                                                  borderSide: BorderSide(
-                                                    color: AppColors.errorColor,
-                                                    width: 1.5,
-                                                  ),
-                                                ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 20),
-                                        // PASSWORD
-                                        Text(
-                                          'كلمة المرور',
-                                          style: TextStyle(
-                                            color: AppColors.textPrimary,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 9),
-                                        TextFormField(
-                                          controller: _passwordController,
-                                          obscureText: _isPasswordObscured,
-                                          textInputAction: TextInputAction.done,
-                                          onFieldSubmitted: (_) {
-                                            if (!isLoading) {
-                                              _submitRegister(context);
-                                            }
-                                          },
-                                          style: TextStyle(
-                                            color: AppColors.textPrimary,
-                                            fontSize: 14,
-                                          ),
-                                          cursorColor: accentColor,
-                                          validator: (value) {
-                                            if (value == null ||
-                                                value.isEmpty) {
-                                              return 'يرجى إدخال كلمة المرور';
-                                            }
-                                            if (value.length < 6) {
-                                              return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
-                                            }
-                                            return null;
-                                          },
-                                          decoration: InputDecoration(
-                                            hintText: 'أدخل كلمة المرور',
-                                            hintStyle: TextStyle(
-                                              color: AppColors.hintColor,
-                                              fontSize: 14,
-                                            ),
-                                            prefixIcon: Icon(
-                                              Icons.lock_outline,
-                                              color: AppColors.textSecondary,
-                                              size: 21,
-                                            ),
-                                            suffixIcon: IconButton(
-                                              onPressed: () {
-                                                setState(() {
-                                                  _isPasswordObscured =
-                                                      !_isPasswordObscured;
-                                                });
-                                              },
-                                              icon: Icon(
-                                                _isPasswordObscured
-                                                    ? Icons
-                                                          .visibility_off_outlined
-                                                    : Icons.visibility_outlined,
-                                                color: AppColors.textSecondary,
-                                                size: 21,
-                                              ),
-                                            ),
-                                            filled: true,
-                                            fillColor: AppColors.inputColor,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  horizontal: 16,
-                                                  vertical: 17,
-                                                ),
-                                            border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              borderSide: BorderSide(
-                                                color: AppColors.borderColor,
-                                              ),
-                                            ),
-                                            enabledBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              borderSide: BorderSide(
-                                                color: AppColors.borderColor,
-                                              ),
-                                            ),
-                                            focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              borderSide: BorderSide(
-                                                color: accentColor,
-                                                width: 1.5,
-                                              ),
-                                            ),
-                                            errorBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              borderSide: BorderSide(
-                                                color: AppColors.errorColor,
-                                              ),
-                                            ),
-                                            focusedErrorBorder:
-                                                OutlineInputBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(14),
-                                                  borderSide: BorderSide(
-                                                    color: AppColors.errorColor,
-                                                    width: 1.5,
-                                                  ),
-                                                ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 28),
-                                        // REGISTER BUTTON (OUTLINED & SHAKING)
-                                        _AnimatedSubmitButton(
-                                          key: _buttonKey,
-                                          isLoading: isLoading,
-                                          label: 'إنشاء حساب',
-                                          accentColor: AppColors.accentColor,
-                                          onPressed: () =>
-                                              _submitRegister(context),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 26),
-                              // LOGIN LINK
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'لديك حساب بالفعل؟ ',
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: isLoading
-                                        ? null
-                                        : () {
-                                            Navigator.pushReplacement(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    const LoginScreen(),
-                                              ),
-                                            );
-                                          },
-                                    child: Text(
-                                      'تسجيل الدخول',
-                                      style: TextStyle(
-                                        color: accentColor,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                                child: child,
+                              );
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardColor,
+                                borderRadius: BorderRadius.circular(28),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.30),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 12),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 24),
-                              // FOOTER
-                              Text(
-                                'BARBER ON YOUR TIME',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: AppColors.footerColor,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 3,
+                              child: Form(
+                                key: _formKey,
+                                child: Column(
+                                  crossAxisAlignment:
+                                  CrossAxisAlignment.stretch,
+                                  children: [
+                                    // NAME
+                                    Text(
+                                      'الاسم الكامل',
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextFormField(
+                                      controller: _nameController,
+                                      textInputAction: TextInputAction.next,
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 16,
+                                      ),
+                                      cursorColor: accentColor,
+                                      validator: (value) {
+                                        if (value == null ||
+                                            value.trim().isEmpty) {
+                                          return 'يرجى إدخال الاسم الكامل';
+                                        }
+                                        return null;
+                                      },
+                                      decoration: _inputDecoration(
+                                        hint: 'أدخل اسمك الكامل',
+                                        icon: Icons.person_outline,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    // EMAIL
+                                    Text(
+                                      'البريد الإلكتروني',
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextFormField(
+                                      controller: _emailController,
+                                      keyboardType: TextInputType.emailAddress,
+                                      textInputAction: TextInputAction.next,
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 16,
+                                      ),
+                                      cursorColor: accentColor,
+                                      validator: (value) {
+                                        if (value == null ||
+                                            value.trim().isEmpty) {
+                                          return 'يرجى إدخال البريد الإلكتروني';
+                                        }
+                                        if (!RegExp(
+                                          r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$',
+                                        ).hasMatch(value.trim())) {
+                                          return 'يرجى إدخال بريد إلكتروني صالح';
+                                        }
+                                        return null;
+                                      },
+                                      decoration: _inputDecoration(
+                                        hint: 'أدخل بريدك الإلكتروني',
+                                        icon: Icons.email_outlined,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    // PASSWORD
+                                    Text(
+                                      'كلمة المرور',
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextFormField(
+                                      controller: _passwordController,
+                                      obscureText: _isPasswordObscured,
+                                      textInputAction: TextInputAction.done,
+                                      onFieldSubmitted: (_) {
+                                        if (!isLoading) {
+                                          _submitRegister(context);
+                                        }
+                                      },
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 16,
+                                      ),
+                                      cursorColor: accentColor,
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'يرجى إدخال كلمة المرور';
+                                        }
+                                        if (value.length < 6) {
+                                          return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                                        }
+                                        return null;
+                                      },
+                                      decoration: _inputDecoration(
+                                        hint: 'أدخل كلمة المرور',
+                                        icon: Icons.lock_outline,
+                                        suffixIcon: IconButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _isPasswordObscured =
+                                              !_isPasswordObscured;
+                                            });
+                                          },
+                                          icon: Icon(
+                                            _isPasswordObscured
+                                                ? Icons.visibility_off_outlined
+                                                : Icons.visibility_outlined,
+                                            color: AppColors.textSecondary,
+                                            size: 24,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 28),
+                                    // REGISTER BUTTON
+                                    _AnimatedSubmitButton(
+                                      key: _buttonKey,
+                                      isLoading: isLoading,
+                                      label: 'إنشاء حساب',
+                                      accentColor: AppColors.accentColor,
+                                      onPressed: () => _submitRegister(context),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const Spacer(),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // LOGIN LINK
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'لديك حساب بالفعل؟ ',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: isLoading
+                                    ? null
+                                    : () {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                      const LoginScreen(),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'تسجيل الدخول',
+                                  style: TextStyle(
+                                    color: accentColor,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
-                        ),
+                          const SizedBox(height: 24),
+                          // FOOTER
+                          Text(
+                            'BARBER ON YOUR TIME',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.footerColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 2.5,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
-              ),
+              ],
             );
           },
         ),
@@ -627,74 +504,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 }
 
-// كلاس رسم مسار الضوء المتحرك (Border Beam)
-class _BorderBeamPainter extends CustomPainter {
-  final double animationValue;
-  final Color color;
-  final double borderRadius;
+// --- Animated Submit Button & Border Beam Classes ---
 
-  _BorderBeamPainter({
-    required this.animationValue,
-    required this.color,
-    required this.borderRadius,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final rRect = RRect.fromRectAndRadius(rect, Radius.circular(borderRadius));
-
-    // إطار خافت وثابت للخلفية
-    final basePaint = Paint()
-      ..color = color.withOpacity(0.15)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    canvas.drawRRect(rRect, basePaint);
-
-    // مسار الضوء المتحرك
-    final path = Path()..addRRect(rRect);
-    final pathMetrics = path.computeMetrics().toList();
-    if (pathMetrics.isEmpty) return;
-
-    final metric = pathMetrics.first;
-    final length = metric.length;
-
-    const beamLength = 150.0;
-    final currentPosition = animationValue * length;
-
-    final extractPath = metric.extractPath(
-      currentPosition,
-      (currentPosition + beamLength) % length,
-    );
-
-    final paint = Paint()
-      ..shader = SweepGradient(
-        colors: [Colors.transparent, color, Colors.transparent],
-        stops: const [0.0, 0.5, 1.0],
-      ).createShader(rect)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round;
-
-    if (currentPosition + beamLength > length) {
-      final extraPath = metric.extractPath(
-        0.0,
-        (currentPosition + beamLength) % length,
-      );
-      canvas.drawPath(extraPath, paint);
-    }
-
-    canvas.drawPath(extractPath, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _BorderBeamPainter oldDelegate) {
-    return oldDelegate.animationValue != animationValue ||
-        oldDelegate.color != color;
-  }
-}
-
-// زر إنشاء الحساب المفرغ الذي يهتز عمودياً ويومض
 class _AnimatedSubmitButton extends StatefulWidget {
   final bool isLoading;
   final String label;
@@ -714,105 +525,104 @@ class _AnimatedSubmitButton extends StatefulWidget {
 }
 
 class _AnimatedSubmitButtonState extends State<_AnimatedSubmitButton>
-    with TickerProviderStateMixin {
-  double _scale = 1.0;
-  late final AnimationController _shakeController;
-  late final AnimationController _flashController;
-  late final Animation<Color?> _flashAnimation;
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animOffset;
 
   @override
   void initState() {
     super.initState();
-    _shakeController = AnimationController(
+    _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 500),
     );
-
-    _flashController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _flashAnimation = ColorTween(
-      begin: widget.accentColor,
-      end: AppColors.errorColor,
-    ).animate(_flashController);
+    _animOffset = Tween<double>(
+      begin: 0.0,
+      end: 10.0,
+    ).chain(CurveTween(curve: Curves.elasticIn)).animate(_controller);
   }
 
   @override
   void dispose() {
-    _shakeController.dispose();
-    _flashController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   void shakeAndFlash() {
-    _shakeController.forward(from: 0.0);
-    _flashController.forward().then((_) {
-      _flashController.reverse();
-    });
+    _controller.forward().then((_) => _controller.reverse());
   }
-
-  void _setScale(double value) => setState(() => _scale = value);
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([_shakeController, _flashController]),
+      animation: _animOffset,
       builder: (context, child) {
-        final sineValue =
-            math.sin(_shakeController.value * 4 * math.pi) *
-            (_shakeController.value < 1.0
-                ? (1.0 - _shakeController.value) * 12.0
-                : 0.0);
-
-        final currentColor = _flashAnimation.value ?? widget.accentColor;
-
-        return Transform.translate(
-          offset: Offset(sineValue, 0),
-          child: GestureDetector(
-            onTapDown: widget.isLoading ? null : (_) => _setScale(0.96),
-            onTapUp: widget.isLoading ? null : (_) => _setScale(1.0),
-            onTapCancel: widget.isLoading ? null : () => _setScale(1.0),
-            onTap: widget.isLoading ? null : widget.onPressed,
-            child: AnimatedScale(
-              scale: _scale,
-              duration: const Duration(milliseconds: 120),
-              curve: Curves.easeOut,
-              child: Container(
-                height: 54,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: currentColor, width: 2),
-                ),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: widget.isLoading
-                      ? SizedBox(
-                          key: const ValueKey('loading'),
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: currentColor,
-                          ),
-                        )
-                      : Text(
-                          widget.label,
-                          key: const ValueKey('label'),
-                          style: TextStyle(
-                            color: currentColor,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-              ),
+        final sinVal = math.sin(_animOffset.value * math.pi * 2);
+        return Transform.translate(offset: Offset(sinVal * 6, 0), child: child);
+      },
+      child: SizedBox(
+        height: 58,
+        child: ElevatedButton(
+          onPressed: widget.isLoading ? null : widget.onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: widget.accentColor,
+            foregroundColor: AppColors.backgroundColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 0,
+          ),
+          child: widget.isLoading
+              ? SizedBox(
+            width: 26,
+            height: 26,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              color: AppColors.backgroundColor,
+            ),
+          )
+              : Text(
+            widget.label,
+            style: TextStyle(
+              color: AppColors.backgroundColor,
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
+  }
+}
+
+class _BorderBeamPainter extends CustomPainter {
+  final double animationValue;
+  final Color color;
+  final double borderRadius;
+
+  _BorderBeamPainter({
+    required this.animationValue,
+    required this.color,
+    required this.borderRadius,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(borderRadius));
+    final paint = Paint()
+      ..color = color.withOpacity(0.6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    final path = Path()..addRRect(rrect);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BorderBeamPainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue ||
+        oldDelegate.color != color ||
+        oldDelegate.borderRadius != borderRadius;
   }
 }

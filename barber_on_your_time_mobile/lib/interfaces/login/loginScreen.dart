@@ -92,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen>
               Icon(
                 isSuccess ? Icons.check_circle_outline : Icons.error_outline,
                 color: Colors.white,
-                size: 22,
+                size: 24,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -100,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen>
                   message,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -112,8 +112,9 @@ class _LoginScreenState extends State<LoginScreen>
               : AppColors.errorColor,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
           duration: const Duration(seconds: 3),
         ),
@@ -187,144 +188,126 @@ class _LoginScreenState extends State<LoginScreen>
                 SafeArea(
                   child: GestureDetector(
                     onTap: () => FocusScope.of(context).unfocus(),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 28,
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 24,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 16),
+                          ScaleTransition(
+                            scale: _logoScale,
+                            child: const _AnimatedLogo(),
                           ),
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minHeight: constraints.maxHeight - 56,
-                            ),
-                            child: IntrinsicHeight(
+                          const SizedBox(height: 20),
+                          FadeTransition(
+                            opacity: _cardFade,
+                            child: SlideTransition(
+                              position: _cardSlide,
                               child: Column(
                                 children: [
-                                  const Spacer(),
-                                  ScaleTransition(
-                                    scale: _logoScale,
-                                    child: const _AnimatedLogo(),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  FadeTransition(
-                                    opacity: _cardFade,
-                                    child: SlideTransition(
-                                      position: _cardSlide,
-                                      child: Column(
-                                        children: [
-                                          Text(
-                                            'أهلاً بك مجدداً',
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              color: AppColors.textPrimary,
-                                              fontSize: 30,
-                                              fontWeight: FontWeight.w800,
-                                              letterSpacing: -0.5,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'سجل دخولك لحجز موعدك القادم',
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              color: AppColors.textSecondary,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 34),
-                                          _LoginCard(
-                                            key: const ValueKey('loginCard'),
-                                            formKey: _formKey,
-                                            emailController: _emailController,
-                                            passwordController:
-                                                _passwordController,
-                                            isPasswordObscured:
-                                                _isPasswordObscured,
-                                            onToggleObscure: () => setState(
-                                              () => _isPasswordObscured =
-                                                  !_isPasswordObscured,
-                                            ),
-                                            isLoading: isLoading,
-                                            onSubmit: () => _submitLogin(
-                                              context,
-                                              buttonKey,
-                                            ),
-                                            buttonKey: buttonKey,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 26),
-                                  FadeTransition(
-                                    opacity: _cardFade,
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          "ليس لديك حساب؟ ",
-                                          style: TextStyle(
-                                            color: AppColors.textSecondary,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        GestureDetector(
-                                          onTap: isLoading
-                                              ? null
-                                              : () {
-                                                  Navigator.push(
-                                                    context,
-                                                    PageRouteBuilder(
-                                                      transitionDuration:
-                                                          const Duration(
-                                                            milliseconds: 350,
-                                                          ),
-                                                      pageBuilder:
-                                                          (
-                                                            _,
-                                                            animation,
-                                                            __,
-                                                          ) => FadeTransition(
-                                                            opacity: animation,
-                                                            child:
-                                                                const RegisterScreen(),
-                                                          ),
-                                                    ),
-                                                  );
-                                                },
-                                          child: Text(
-                                            'إنشاء حساب جديد',
-                                            style: TextStyle(
-                                              color: AppColors.accentColor,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 24),
                                   Text(
-                                    'BARBER ON YOUR TIME',
+                                    'أهلاً بك مجدداً',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 3,
+                                      color: AppColors.textPrimary,
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.5,
                                     ),
                                   ),
-                                  const Spacer(),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'سجل دخولك لحجز موعدك القادم',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  _LoginCard(
+                                    key: const ValueKey('loginCard'),
+                                    formKey: _formKey,
+                                    emailController: _emailController,
+                                    passwordController: _passwordController,
+                                    isPasswordObscured: _isPasswordObscured,
+                                    onToggleObscure: () => setState(
+                                      () => _isPasswordObscured =
+                                          !_isPasswordObscured,
+                                    ),
+                                    isLoading: isLoading,
+                                    onSubmit: () =>
+                                        _submitLogin(context, buttonKey),
+                                    buttonKey: buttonKey,
+                                  ),
                                 ],
                               ),
                             ),
                           ),
-                        );
-                      },
+                          const SizedBox(height: 24),
+                          FadeTransition(
+                            opacity: _cardFade,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "ليس لديك حساب؟ ",
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: isLoading
+                                      ? null
+                                      : () {
+                                          Navigator.push(
+                                            context,
+                                            PageRouteBuilder(
+                                              transitionDuration:
+                                                  const Duration(
+                                                    milliseconds: 350,
+                                                  ),
+                                              pageBuilder: (_, animation, __) =>
+                                                  FadeTransition(
+                                                    opacity: animation,
+                                                    child:
+                                                        const RegisterScreen(),
+                                                  ),
+                                            ),
+                                          );
+                                        },
+                                  child: Text(
+                                    'إنشاء حساب جديد',
+                                    style: TextStyle(
+                                      color: AppColors.accentColor,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'BARBER ON YOUR TIME',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 2.5,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -370,14 +353,14 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
       builder: (context, child) {
         final glow = 0.18 + (_pulseController.value * 0.12);
         return Container(
-          width: 92,
-          height: 92,
+          width: 96,
+          height: 96,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: AppColors.cardColor,
             border: Border.all(
               color: AppColors.accentColor.withOpacity(0.35),
-              width: 1.5,
+              width: 2,
             ),
             boxShadow: [
               BoxShadow(
@@ -391,7 +374,7 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
         );
       },
       child: Container(
-        margin: const EdgeInsets.all(9),
+        margin: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(
@@ -406,7 +389,7 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
         child: const Icon(
           Icons.content_cut_rounded,
           color: AppColors.backgroundColor,
-          size: 42,
+          size: 46,
         ),
       ),
     );
@@ -465,23 +448,23 @@ class _LoginCardState extends State<_LoginCard>
   }) {
     OutlineInputBorder border(Color color, [double width = 1]) =>
         OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: color, width: width),
         );
 
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: AppColors.hintColor, fontSize: 14),
-      prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 21),
+      hintStyle: TextStyle(color: AppColors.hintColor, fontSize: 15),
+      prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 24),
       suffixIcon: suffix,
       filled: true,
       fillColor: AppColors.inputColor,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       border: border(AppColors.borderColor.withOpacity(0.5)),
       enabledBorder: border(AppColors.borderColor.withOpacity(0.5)),
-      focusedBorder: border(AppColors.accentColor, 1.5),
+      focusedBorder: border(AppColors.accentColor, 2),
       errorBorder: border(AppColors.errorColor),
-      focusedErrorBorder: border(AppColors.errorColor, 1.5),
+      focusedErrorBorder: border(AppColors.errorColor, 2),
     );
   }
 
@@ -494,7 +477,7 @@ class _LoginCardState extends State<_LoginCard>
           painter: _BorderBeamPainter(
             animationValue: _ledController.value,
             color: AppColors.accentColor,
-            borderRadius: 26.0,
+            borderRadius: 28.0,
           ),
           child: child,
         );
@@ -504,12 +487,12 @@ class _LoginCardState extends State<_LoginCard>
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: AppColors.cardColor,
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
@@ -522,16 +505,16 @@ class _LoginCardState extends State<_LoginCard>
                 'البريد الإلكتروني',
                 style: TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 9),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: widget.emailController,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
                 cursorColor: AppColors.accentColor,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -554,11 +537,11 @@ class _LoginCardState extends State<_LoginCard>
                 'كلمة المرور',
                 style: TextStyle(
                   color: AppColors.textPrimary,
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 9),
+              const SizedBox(height: 8),
               TextFormField(
                 controller: widget.passwordController,
                 obscureText: widget.isPasswordObscured,
@@ -566,7 +549,7 @@ class _LoginCardState extends State<_LoginCard>
                 onFieldSubmitted: (_) {
                   if (!widget.isLoading) widget.onSubmit();
                 },
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
                 cursorColor: AppColors.accentColor,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -592,7 +575,7 @@ class _LoginCardState extends State<_LoginCard>
                             : Icons.visibility_outlined,
                         key: ValueKey(widget.isPasswordObscured),
                         color: AppColors.textSecondary,
-                        size: 21,
+                        size: 24,
                       ),
                     ),
                   ),
@@ -613,7 +596,6 @@ class _LoginCardState extends State<_LoginCard>
   }
 }
 
-// كلاس رسم مسار الضوء المتحرك على حواف الصندوق
 class _BorderBeamPainter extends CustomPainter {
   final double animationValue;
   final Color color;
@@ -630,14 +612,12 @@ class _BorderBeamPainter extends CustomPainter {
     final rect = Offset.zero & size;
     final rRect = RRect.fromRectAndRadius(rect, Radius.circular(borderRadius));
 
-    // رسم إطار خافت وثابت للخلفية
     final basePaint = Paint()
       ..color = color.withOpacity(0.15)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+      ..strokeWidth = 2;
     canvas.drawRRect(rRect, basePaint);
 
-    // مسار الضوء المتحرك (Gradient Sweep)
     final path = Path()..addRRect(rRect);
 
     final pathMetrics = path.computeMetrics().toList();
@@ -767,11 +747,11 @@ class _AnimatedSubmitButtonState extends State<_AnimatedSubmitButton>
               duration: const Duration(milliseconds: 120),
               curve: Curves.easeOut,
               child: Container(
-                height: 54,
+                height: 58,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: currentColor, width: 2),
                 ),
                 child: AnimatedSwitcher(
@@ -779,10 +759,10 @@ class _AnimatedSubmitButtonState extends State<_AnimatedSubmitButton>
                   child: widget.isLoading
                       ? SizedBox(
                           key: const ValueKey('loading'),
-                          width: 24,
-                          height: 24,
+                          width: 26,
+                          height: 26,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
+                            strokeWidth: 3,
                             color: currentColor,
                           ),
                         )
@@ -791,7 +771,7 @@ class _AnimatedSubmitButtonState extends State<_AnimatedSubmitButton>
                           key: const ValueKey('label'),
                           style: TextStyle(
                             color: currentColor,
-                            fontSize: 16,
+                            fontSize: 17,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
