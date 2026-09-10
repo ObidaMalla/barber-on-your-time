@@ -8,8 +8,7 @@ import '../../injections/bootStrap/auth/login_injection.dart';
 import '../../models/availability/addAvailability/add_availability_model.dart';
 
 class AddAvailabilityScreen extends StatefulWidget {
-  final List<DateTime>
-  existingDates; // 👈 استخدام قائمة التواريخ المسجلة بدلاً من رقم اليوم
+  final List<DateTime> existingDates;
 
   const AddAvailabilityScreen({super.key, this.existingDates = const []});
 
@@ -58,7 +57,10 @@ class _AddAvailabilityScreenState extends State<AddAvailabilityScreen> {
             ),
             dialogBackgroundColor: AppColors.backgroundColor,
           ),
-          child: child!,
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: child!,
+          ),
         );
       },
     );
@@ -88,7 +90,10 @@ class _AddAvailabilityScreenState extends State<AddAvailabilityScreen> {
             ),
             dialogBackgroundColor: AppColors.backgroundColor,
           ),
-          child: child!,
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: child!,
+          ),
         );
       },
     );
@@ -117,7 +122,6 @@ class _AddAvailabilityScreenState extends State<AddAvailabilityScreen> {
     return '$y-$m-$d';
   }
 
-  // 👈 دالة مساعدة لمقارنة تاريخين من دون الوقت
   bool _isSameDate(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
@@ -129,7 +133,6 @@ class _AddAvailabilityScreenState extends State<AddAvailabilityScreen> {
       return;
     }
 
-    // 🛑 الشرط الجديد: التحقق إذا كان التاريخ المختار مضافاً مسبقاً
     final alreadyExists = widget.existingDates.any(
       (d) => _isSameDate(d, _selectedDate!),
     );
@@ -162,168 +165,202 @@ class _AddAvailabilityScreenState extends State<AddAvailabilityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
-      child: Scaffold(
-        backgroundColor: AppColors.backgroundColor,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: true,
-          title: Text(
-            'تحديد وقت دوام جديد',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: BlocProvider.value(
+        value: _cubit,
+        child: Scaffold(
+          backgroundColor: AppColors.backgroundColor,
+          appBar: AppBar(
+            backgroundColor: AppColors.backgroundColor,
+            elevation: 0,
+            centerTitle: true,
+            title: const Text(
+              'تحديد وقت دوام جديد',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            leading: IconButton(
+              icon: const Icon(
+                Icons.arrow_back_ios_new,
+                color: AppColors.textPrimary,
+              ),
+              onPressed: () => Navigator.pop(context),
             ),
           ),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        body: BlocConsumer<AddAvailabilityCubit, ResultState<AddAvailabilityModel>>(
-          listener: (context, state) {
-            state.whenOrNull(
-              success: (response) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(response.message ?? 'تم تحديد الدوام بنجاح'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-                Navigator.pop(context, true);
-              },
-              error: (message) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(message),
-                    backgroundColor: Colors.redAccent,
-                  ),
-                );
-              },
-            );
-          },
-          builder: (context, state) {
-            final isLoading = state.maybeWhen(
-              loading: () => true,
-              orElse: () => false,
-            );
-
-            return Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 10),
-                    Text(
-                      'اختر التاريخ',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: _pickDate,
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.cardColor,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: _selectedDate != null
-                                ? AppColors.accentColor.withOpacity(0.5)
-                                : Colors.transparent,
+          body:
+              BlocConsumer<
+                AddAvailabilityCubit,
+                ResultState<AddAvailabilityModel>
+              >(
+                listener: (context, state) {
+                  state.whenOrNull(
+                    success: (response) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            response.message ?? 'تم تحديد الدوام بنجاح',
                           ),
+                          backgroundColor: AppColors.successColor,
                         ),
-                        child: Row(
+                      );
+                      Navigator.pop(context, true);
+                    },
+                    error: (message) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(message),
+                          backgroundColor: AppColors.errorColor,
+                        ),
+                      );
+                    },
+                  );
+                },
+                builder: (context, state) {
+                  final isLoading = state.maybeWhen(
+                    loading: () => true,
+                    orElse: () => false,
+                  );
+
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.calendar_today_rounded,
-                              color: AppColors.accentColor,
-                              size: 20,
+                            // صندوق التاريخ
+                            InkWell(
+                              onTap: _pickDate,
+                              borderRadius: BorderRadius.circular(20),
+                              child: _LightSweepBorder(
+                                borderRadius: 20,
+                                borderColor: AppColors.accentColor,
+                                borderThickness: 2.5,
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.cardColor,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: AppColors.accentColor
+                                              .withOpacity(0.15),
+                                        ),
+                                        child: const Icon(
+                                          Icons.calendar_today_rounded,
+                                          color: AppColors.accentColor,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        _selectedDate != null
+                                            ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}  —  ${_daysMap[_selectedDay]}'
+                                            : 'اختر التاريخ...',
+                                        style: const TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
-                            const SizedBox(width: 10),
-                            Text(
-                              _selectedDate != null
-                                  ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}  —  ${_daysMap[_selectedDay]}'
-                                  : 'اختر التاريخ...',
+                            const SizedBox(height: 28),
+                            const Text(
+                              'أوقات العمل',
+                              textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: AppColors.textPrimary,
-                                fontSize: 15,
                                 fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTimePickerTile(
+                                    title: 'وقت البدء',
+                                    time: _startTime,
+                                    onTap: () => _selectTime(isStartTime: true),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildTimePickerTile(
+                                    title: 'وقت النهاية',
+                                    time: _endTime,
+                                    onTap: () =>
+                                        _selectTime(isStartTime: false),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 40),
+
+                            // زر حفظ الدوام
+                            _LightSweepBorder(
+                              borderRadius: 16,
+                              borderColor: AppColors.accentColor,
+                              borderThickness: 2.5,
+                              child: SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.backgroundColor,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  onPressed: isLoading ? null : _submit,
+                                  child: isLoading
+                                      ? const CircularProgressIndicator(
+                                          color: AppColors.accentColor,
+                                        )
+                                      : const Text(
+                                          'حفظ الدوام',
+                                          style: TextStyle(
+                                            color: AppColors.accentColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'أوقات العمل',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildTimePickerTile(
-                            title: 'وقت البدء',
-                            time: _startTime,
-                            onTap: () => _selectTime(isStartTime: true),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildTimePickerTile(
-                            title: 'وقت النهاية',
-                            time: _endTime,
-                            onTap: () => _selectTime(isStartTime: false),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 40),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        onPressed: isLoading ? null : _submit,
-                        child: isLoading
-                            ? CircularProgressIndicator(
-                                color: AppColors.backgroundColor,
-                              )
-                            : Text(
-                                'حفظ الدوام',
-                                style: TextStyle(
-                                  color: AppColors.backgroundColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
-            );
-          },
         ),
       ),
     );
@@ -336,47 +373,126 @@ class _AddAvailabilityScreenState extends State<AddAvailabilityScreen> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.cardColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: time != null
-                ? AppColors.accentColor.withOpacity(0.5)
-                : Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: _LightSweepBorder(
+        borderRadius: 20,
+        borderColor: AppColors.accentColor,
+        borderThickness: 2.5,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.cardColor,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.access_time_rounded,
+                    color: AppColors.accentColor,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    time != null ? time.format(context) : '--:--',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  Icons.access_time_rounded,
-                  color: AppColors.accentColor,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  time != null ? time.format(context) : '--:--',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
+    );
+  }
+}
+
+// =========================================================
+// Light Sweep Animation Border Widget
+// =========================================================
+class _LightSweepBorder extends StatefulWidget {
+  final Widget child;
+  final double borderRadius;
+  final Color borderColor;
+  final double borderThickness;
+
+  const _LightSweepBorder({
+    required this.child,
+    required this.borderRadius,
+    required this.borderColor,
+    this.borderThickness = 2.5,
+  });
+
+  @override
+  State<_LightSweepBorder> createState() => _LightSweepBorderState();
+}
+
+class _LightSweepBorderState extends State<_LightSweepBorder>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          padding: EdgeInsets.all(widget.borderThickness),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            gradient: SweepGradient(
+              center: Alignment.center,
+              transform: GradientRotation(_controller.value * 6.283185),
+              colors: [
+                widget.borderColor.withOpacity(0.15),
+                widget.borderColor,
+                widget.borderColor.withOpacity(0.15),
+              ],
+              stops: const [0.0, 0.25, 0.5],
+            ),
+          ),
+          child: widget.child,
+        );
+      },
     );
   }
 }

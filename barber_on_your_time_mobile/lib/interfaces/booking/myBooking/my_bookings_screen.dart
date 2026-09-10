@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 
 import '../../../core/color/colors.dart';
 import '../../../core/notification_bell_icon.dart';
@@ -100,7 +100,6 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
             : booking.id;
       });
     } else {
-      // الانتقال إلى واجهة التفاصيل عند الضغط العادي
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -124,41 +123,44 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: AppColors.cardColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            'تأكيد إلغاء الحجز',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            backgroundColor: AppColors.cardColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-          ),
-          content: Text(
-            'هل أنت متأكد من إلغاء هذا الحجز؟ لا يمكن التراجع عن هذا الإجراء.',
-            style: TextStyle(color: AppColors.textSecondary),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: Text(
-                'تراجع',
-                style: TextStyle(color: AppColors.textSecondary),
+            title: Text(
+              'تأكيد إلغاء الحجز',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: Text(
-                'تأكيد الحذف',
-                style: TextStyle(
-                  color: AppColors.errorColor,
-                  fontWeight: FontWeight.bold,
+            content: Text(
+              'هل أنت متأكد من إلغاء هذا الحجز؟ لا يمكن التراجع عن هذا الإجراء.',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(
+                  'تراجع',
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
               ),
-            ),
-          ],
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(
+                  'تأكيد الحذف',
+                  style: TextStyle(
+                    color: AppColors.errorColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -172,149 +174,158 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   Widget build(BuildContext context) {
     final bool isSelectionMode = _selectedBookingId != null;
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
-      appBar: AppBar(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
         backgroundColor: AppColors.backgroundColor,
-        elevation: 0,
-        leading: isSelectionMode
-            ? IconButton(
-                icon: Icon(Icons.close, color: AppColors.textPrimary),
-                onPressed: _clearSelection,
-              )
-            : null,
-        title: Text(
-          isSelectionMode ? 'تم تحديد عنصر' : 'حجوزاتي',
-          style: TextStyle(
-            color: AppColors.dangerColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          const NotificationBellIcon(), // 👈 جديد — أيقونة الجرس مع الـ badge
-          if (isSelectionMode)
-            IconButton(
-              icon: Icon(Icons.delete_outline, color: AppColors.errorColor),
-              onPressed: _confirmCancelBooking,
+        appBar: AppBar(
+          backgroundColor: AppColors.backgroundColor,
+          elevation: 0,
+          centerTitle: true,
+          leading: isSelectionMode
+              ? IconButton(
+                  icon: Icon(Icons.close, color: AppColors.textPrimary),
+                  onPressed: _clearSelection,
+                )
+              : null,
+          title: Text(
+            isSelectionMode ? 'تم تحديد عنصر' : 'حجوزاتي',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
             ),
-        ],
-      ),
-      body: BlocListener<CancelBookingCubit, ResultState<CancelBookingModel>>(
-        bloc: _cancelCubit,
-        listener: (context, state) {
-          state.whenOrNull(
-            loading: () {
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) {
-                  return Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.accentColor,
-                    ),
-                  );
-                },
-              );
-            },
-            success: (data) {
-              Navigator.pop(context);
-              _showSnackBar('تم إلغاء الحجز بنجاح', Colors.green);
-              _clearSelection();
-              _cancelCubit.resetState();
-              _cubit.getMyBookings();
-            },
-            error: (message) {
-              Navigator.pop(context);
-              _showSnackBar(message, AppColors.errorColor);
-              _cancelCubit.resetState();
-            },
-          );
-        },
-        child: BlocBuilder<GetMyBookingsCubit, ResultState<GetMyBookingsModel>>(
-          bloc: _cubit,
-          builder: (context, state) {
-            return state.when(
-              idle: () => const SizedBox.shrink(),
+          ),
+          actions: [
+            const NotificationBellIcon(),
+            if (isSelectionMode)
+              IconButton(
+                icon: Icon(Icons.delete_outline, color: AppColors.errorColor),
+                onPressed: _confirmCancelBooking,
+              ),
+          ],
+        ),
+        body: BlocListener<CancelBookingCubit, ResultState<CancelBookingModel>>(
+          bloc: _cancelCubit,
+          listener: (context, state) {
+            state.whenOrNull(
               loading: () {
-                return Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.accentColor,
-                  ),
-                );
-              },
-              error: (msg) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: AppColors.errorColor,
-                          size: 40,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          msg,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: AppColors.errorColor),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => _cubit.getMyBookings(),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accentColor,
-                          ),
-                          child: const Text(
-                            'إعادة المحاولة',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (_) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.accentColor,
+                      ),
+                    );
+                  },
                 );
               },
               success: (data) {
-                final bookings = (data.data ?? [])
-                    .where((b) => b.status != 'CANCELLED')
-                    .toList();
-
-                if (bookings.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.calendar_today_outlined,
-                          color: AppColors.textSecondary,
-                          size: 48,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'لا توجد حجوزات بعد',
-                          style: TextStyle(color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return RefreshIndicator(
-                  color: AppColors.accentColor,
-                  onRefresh: () => _cubit.getMyBookings(),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(20),
-                    itemCount: bookings.length,
-                    itemBuilder: (context, index) {
-                      return _buildGlowingBookingCard(bookings[index]);
-                    },
-                  ),
-                );
+                Navigator.pop(context);
+                _showSnackBar('تم إلغاء الحجز بنجاح', Colors.green);
+                _clearSelection();
+                _cancelCubit.resetState();
+                _cubit.getMyBookings();
+              },
+              error: (message) {
+                Navigator.pop(context);
+                _showSnackBar(message, AppColors.errorColor);
+                _cancelCubit.resetState();
               },
             );
           },
+          child:
+              BlocBuilder<GetMyBookingsCubit, ResultState<GetMyBookingsModel>>(
+                bloc: _cubit,
+                builder: (context, state) {
+                  return state.when(
+                    idle: () => const SizedBox.shrink(),
+                    loading: () {
+                      return Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.accentColor,
+                        ),
+                      );
+                    },
+                    error: (msg) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: AppColors.errorColor,
+                                size: 40,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                msg,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: AppColors.errorColor),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () => _cubit.getMyBookings(),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.accentColor,
+                                ),
+                                child: const Text(
+                                  'إعادة المحاولة',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    success: (data) {
+                      final bookings = (data.data ?? [])
+                          .where((b) => b.status != 'CANCELLED')
+                          .toList();
+
+                      if (bookings.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_today_outlined,
+                                color: AppColors.textSecondary,
+                                size: 48,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'لا توجد حجوزات بعد',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return RefreshIndicator(
+                        color: AppColors.accentColor,
+                        onRefresh: () => _cubit.getMyBookings(),
+                        child: ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                          itemCount: bookings.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 14),
+                          itemBuilder: (context, index) {
+                            return _buildGlowingBookingCard(bookings[index]);
+                          },
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
         ),
       ),
     );
@@ -333,15 +344,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
         animation: _glowController,
         builder: (context, child) {
           return Container(
-            margin: const EdgeInsets.only(bottom: 18),
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
                   color: themeColor.withOpacity(0.12),
-                  blurRadius: 18,
+                  blurRadius: 16,
                   spreadRadius: 1,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
@@ -352,21 +363,23 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
                     curve: Curves.easeOut,
-                    width: isSelected ? 64 : 0,
-                    decoration: BoxDecoration(color: AppColors.borderColor),
+                    width: isSelected ? 52 : 0,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentColor.withOpacity(0.15),
+                    ),
                     child: isSelected
                         ? Center(
                             child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: const BoxDecoration(
-                                color: AppColors.barberRed,
+                              width: 26,
+                              height: 26,
+                              decoration: BoxDecoration(
+                                color: AppColors.errorColor,
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(
-                                Icons.check,
-                                color: AppColors.textSecondary,
-                                size: 20,
+                              child: const Icon(
+                                Icons.check_rounded,
+                                color: Colors.white,
+                                size: 16,
                               ),
                             ),
                           )
@@ -391,33 +404,40 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                         ),
                       ),
                       child: Container(
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(color: AppColors.cardColor),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Expanded(
                                   child: Text(
                                     booking.service?.name ?? 'خدمة غير محددة',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.start,
                                     style: TextStyle(
                                       color: AppColors.textPrimary,
                                       fontWeight: FontWeight.w800,
-                                      fontSize: 17,
+                                      fontSize: 16,
                                     ),
                                   ),
                                 ),
+                                const SizedBox(width: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 5,
+                                    horizontal: 10,
+                                    vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
                                     color: themeColor.withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(25),
+                                    borderRadius: BorderRadius.circular(20),
                                     border: Border.all(
                                       color: themeColor.withOpacity(0.4),
                                       width: 1,
@@ -428,7 +448,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                     style: TextStyle(
                                       color: themeColor,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 11.5,
+                                      fontSize: 11,
                                     ),
                                   ),
                                 ),
@@ -436,6 +456,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                             ),
                             const SizedBox(height: 10),
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Icon(
                                   Icons.payments_outlined,
@@ -448,19 +469,23 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                   style: TextStyle(
                                     color: themeColor,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                                    fontSize: 13.5,
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  '•',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary.withOpacity(
-                                      0.5,
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                  ),
+                                  child: Container(
+                                    width: 4,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: AppColors.textSecondary
+                                          .withOpacity(0.4),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
                                 Icon(
                                   Icons.timer_outlined,
                                   size: 16,
@@ -471,59 +496,70 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
                                   '${booking.service?.durationMinutes ?? 0} دقيقة',
                                   style: TextStyle(
                                     color: AppColors.textSecondary,
-                                    fontSize: 13,
+                                    fontSize: 12.5,
                                   ),
                                 ),
                               ],
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                               child: Divider(
                                 color: AppColors.textPrimary.withOpacity(0.08),
                                 height: 1,
                               ),
                             ),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: AppColors.inputColor,
+                                Expanded(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: AppColors.inputColor,
+                                        ),
+                                        child: Icon(
+                                          Icons.person_rounded,
+                                          size: 14,
+                                          color: themeColor,
+                                        ),
                                       ),
-                                      child: Icon(
-                                        Icons.person_rounded,
-                                        size: 16,
-                                        color: themeColor,
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          booking.staff?.user?.name ??
+                                              'بدون اسم',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.start,
+                                          style: TextStyle(
+                                            color: AppColors.textPrimary,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      booking.staff?.user?.name ?? 'بدون اسم',
-                                      style: TextStyle(
-                                        color: AppColors.textPrimary,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13.5,
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
+                                const SizedBox(width: 8),
                                 Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
                                       Icons.schedule_rounded,
-                                      size: 16,
+                                      size: 15,
                                       color: AppColors.textSecondary,
                                     ),
-                                    const SizedBox(width: 6),
+                                    const SizedBox(width: 5),
                                     Text(
                                       _formatDateTime(booking.startTime),
                                       style: TextStyle(
                                         color: AppColors.textSecondary,
-                                        fontSize: 12.5,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),

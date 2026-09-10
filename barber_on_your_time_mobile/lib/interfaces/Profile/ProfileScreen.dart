@@ -204,9 +204,11 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               return Stack(
                 children: [
+                  // ابحث عن هذا الجزء داخل Widget build وعدله كالتالي:
                   Positioned.fill(
                     child: Opacity(
-                      opacity: 0.04,
+                      opacity:
+                          0.15, // تم رفع الشفافية لتظهر الأيقونات بوضوح بدلاً من 0.04
                       child: GridView.builder(
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate:
@@ -225,7 +227,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ];
                           return Icon(
                             icons[index % icons.length],
-                            color: Colors.white,
+                            color: AppColors
+                                .accentColor, // يمكنك استخدام اللون الذهبي بدلاً من الأبيض لبروز أكبر
                             size: 36,
                           );
                         },
@@ -361,17 +364,14 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.cardColor.withOpacity(0.85),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: AppColors.accentColor.withOpacity(0.3),
-          width: 1.5,
-        ),
+        color: AppColors.cardColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.accentColor.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.accentColor.withOpacity(0.08),
-            blurRadius: 20,
-            spreadRadius: 2,
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -465,9 +465,16 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardColor.withOpacity(0.9),
+        color: AppColors.cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.textPrimary.withOpacity(0.08)),
+        border: Border.all(color: AppColors.accentColor.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,7 +592,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 }
 
 // =========================================================
-// _LogoutConfirmationSheet Implementation
+// _LogoutConfirmationSheet Implementation (الوضع الطبيعي الاصلي)
 // =========================================================
 class _LogoutConfirmationSheet extends StatefulWidget {
   const _LogoutConfirmationSheet();
@@ -651,9 +658,7 @@ class _LogoutConfirmationSheetState extends State<_LogoutConfirmationSheet> {
                           ? null
                           : () => Navigator.of(context).pop(),
                       style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(
-                          52,
-                        ), // 👈 حل مشكلة height
+                        minimumSize: const Size.fromHeight(52),
                         side: BorderSide(color: AppColors.borderColor),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -676,9 +681,7 @@ class _LogoutConfirmationSheetState extends State<_LogoutConfirmationSheet> {
                       color: Colors.redAccent,
                       onPressed: () {
                         setState(() => _errorMessage = null);
-                        context
-                            .read<LogoutCubit>()
-                            .logoutUser(); // 👈 تعديل اسم الميثود هنا
+                        context.read<LogoutCubit>().logoutUser();
                       },
                     ),
                   ),
@@ -691,6 +694,7 @@ class _LogoutConfirmationSheetState extends State<_LogoutConfirmationSheet> {
     );
   }
 }
+
 // =========================================================
 // Components / Helpers
 // =========================================================

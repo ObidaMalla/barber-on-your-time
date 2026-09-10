@@ -22,8 +22,10 @@ class BookingDetailsScreen extends StatefulWidget {
   State<BookingDetailsScreen> createState() => _BookingDetailsScreenState();
 }
 
-class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
+class _BookingDetailsScreenState extends State<BookingDetailsScreen>
+    with TickerProviderStateMixin {
   late final RespondBookingCubit _respondCubit;
+  late final AnimationController _ledController;
 
   Timer? _countdownTimer;
   Duration _remainingTime = Duration.zero;
@@ -61,6 +63,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   void initState() {
     super.initState();
     _respondCubit = getIt<RespondBookingCubit>();
+    _ledController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat();
     _startCountdown();
   }
 
@@ -72,7 +78,6 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   }
 
   void _updateRemainingTime() {
-    // إذا كانت حالة الحجز مكتملة مسبقاً، يتم توقيف العداد فوراً
     if (widget.booking.status == 'COMPLETED') {
       _countdownTimer?.cancel();
       if (!mounted) return;
@@ -138,6 +143,11 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       phase = CountdownPhase.finished;
       remaining = Duration.zero;
       _countdownTimer?.cancel();
+
+      // الشرط المنطقي: إذا انتهى الوقت (وصل للصفر) والحالة ما زالت PENDING، قم بتحويلها تلقائياً إلى مرفوض
+      if (widget.booking.status == 'PENDING') {
+        _respondAutomaticReject();
+      }
     }
 
     final reachedHalfTime =
@@ -152,6 +162,16 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       _remainingTime = remaining;
       _canEnterCode = showCodeIcon;
     });
+  }
+
+  void _respondAutomaticReject() {
+    // لمنع التكرار المستمر إذا كان الطلب قيد التنفيذ أو تم إرساله مسبقاً
+    if (widget.booking.status != 'PENDING') return;
+
+    // تحديث الحالة محلياً منعاً لتكرار الطلب
+    widget.booking.status =
+        'CANCELLED'; // أو 'REJECTED' حسب القيمة المعتمدة في النظام لديك
+    _respond('REJECT');
   }
 
   DateTime? _getLocalBookingDate() {
@@ -169,6 +189,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   @override
   void dispose() {
     _countdownTimer?.cancel();
+    _ledController.dispose();
     super.dispose();
   }
 
@@ -182,6 +203,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       case 'NEEDS_OWNER':
         return AppColors.accentColor;
       case 'CANCELLED':
+      case 'REJECTED':
         return AppColors.errorColor;
       default:
         return AppColors.textSecondary;
@@ -199,7 +221,8 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       case 'NEEDS_OWNER':
         return 'يحتاج تدخل المدير';
       case 'CANCELLED':
-        return 'ملغي';
+      case 'REJECTED':
+        return 'مرفوض';
       default:
         return status ?? '';
     }
@@ -253,7 +276,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       setState(() {
         widget.booking.status = 'COMPLETED';
         _canEnterCode = false;
-        _updateRemainingTime(); // إعادة ضبط الواجهة فور العودة بالحالة الجديدة
+        _updateRemainingTime();
       });
     }
   }
@@ -273,7 +296,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             success: (data) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(data.message ?? 'تم إرسال ردك بنجاح 🎉'),
+                  content: Text(
+                    data.message ?? 'تم إرسال ردك بنجاح 🎉',
+                    textAlign: TextAlign.right,
+                  ),
                   backgroundColor: AppColors.successColor,
                 ),
               );
@@ -282,7 +308,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             error: (message) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(message),
+                  content: Text(message, textAlign: TextAlign.right),
                   backgroundColor: AppColors.errorColor,
                 ),
               );
@@ -301,10 +327,18 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
               backgroundColor: AppColors.backgroundColor,
               elevation: 0,
               centerTitle: true,
-              title: Text(
+              leading: IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: AppColors.accentColor,
+                  size: 20,
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: const Text(
                 'تفاصيل الحجز',
                 style: TextStyle(
-                  color: AppColors.dangerColor,
+                  color: AppColors.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                 ),
@@ -329,74 +363,119 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.10),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: statusColor.withOpacity(0.4)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline_rounded,
-                            color: statusColor,
-                            size: 22,
+                    // بطاقة الحالة مع إضاءة Led
+                    AnimatedBuilder(
+                      animation: _ledController,
+                      builder: (context, child) {
+                        return CustomPaint(
+                          foregroundPainter: LedBorderPainter(
+                            animationValue: _ledController.value,
+                            glowColor: statusColor,
                           ),
-                          const SizedBox(width: 10),
-                          Text(
-                            _statusLabel(booking.status),
-                            style: TextStyle(
-                              color: statusColor,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardColor,
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: AppColors.borderColor),
-                      ),
-                      child: date == null
-                          ? Text(
-                              'وقت غير معروف',
-                              style: TextStyle(color: AppColors.textSecondary),
-                            )
-                          : Row(
-                              children: [
-                                _buildDateChip(
-                                  icon: Icons.event_rounded,
-                                  label: 'اليوم',
-                                  value: _dayNames[date.weekday - 1],
-                                ),
-                                const SizedBox(width: 10),
-                                _buildDateChip(
-                                  icon: Icons.calendar_today_rounded,
-                                  label: 'التاريخ',
-                                  value:
-                                      '${date.day} ${_monthNames[date.month - 1]}',
-                                ),
-                                const SizedBox(width: 10),
-                                _buildDateChip(
-                                  icon: Icons.access_time_rounded,
-                                  label: 'الساعة',
-                                  value:
-                                      '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}',
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: AppColors.cardColor,
+                              borderRadius: BorderRadius.circular(22),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.25),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 5),
                                 ),
                               ],
                             ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(
+                                  _statusLabel(booking.status),
+                                  style: TextStyle(
+                                    color: statusColor,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Icon(
+                                  Icons.info_outline_rounded,
+                                  color: statusColor,
+                                  size: 22,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
+
+                    // بطاقة التاريخ والوقت مع إضاءة Led
+                    AnimatedBuilder(
+                      animation: _ledController,
+                      builder: (context, child) {
+                        return CustomPaint(
+                          foregroundPainter: LedBorderPainter(
+                            animationValue: _ledController.value,
+                            glowColor: AppColors.accentColor,
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: AppColors.cardColor,
+                              borderRadius: BorderRadius.circular(22),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.25),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: date == null
+                                ? Text(
+                                    'وقت غير معروف',
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceAround,
+                                    children: [
+                                      _buildDateChip(
+                                        icon: Icons.access_time_rounded,
+                                        label: 'الساعة',
+                                        value:
+                                            '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}',
+                                      ),
+                                      _buildDateChip(
+                                        icon: Icons.calendar_today_rounded,
+                                        label: 'التاريخ',
+                                        value:
+                                            '${date.day} ${_monthNames[date.month - 1]}',
+                                      ),
+                                      _buildDateChip(
+                                        icon: Icons.event_rounded,
+                                        label: 'اليوم',
+                                        value: _dayNames[date.weekday - 1],
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 20),
+
+                    // بطاقة العد التنازلي
                     _buildCountdownCard(),
                     const SizedBox(height: 24),
-                    Text(
+
+                    const Text(
                       'العميل',
+                      textAlign: TextAlign.right,
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 16,
@@ -404,60 +483,83 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardColor,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColors.borderColor),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 22,
-                            backgroundColor: AppColors.accentColor.withOpacity(
-                              0.15,
-                            ),
-                            child: Text(
-                              (booking.customer?.name?.isNotEmpty == true)
-                                  ? booking.customer!.name![0].toUpperCase()
-                                  : '?',
-                              style: TextStyle(
-                                color: AppColors.accentColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+
+                    // بطاقة العميل مع إضاءة Led
+                    AnimatedBuilder(
+                      animation: _ledController,
+                      builder: (context, child) {
+                        return CustomPaint(
+                          foregroundPainter: LedBorderPainter(
+                            animationValue: _ledController.value,
+                            glowColor: AppColors.accentColor,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.cardColor,
+                              borderRadius: BorderRadius.circular(22),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
                               children: [
-                                Text(
-                                  booking.customer?.name ?? '',
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        booking.customer?.name ?? '',
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        booking.customer?.email ?? '',
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  booking.customer?.email ?? '',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 12,
+                                const SizedBox(width: 12),
+                                CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor: AppColors.accentColor
+                                      .withOpacity(0.15),
+                                  child: Text(
+                                    (booking.customer?.name?.isNotEmpty == true)
+                                        ? booking.customer!.name![0]
+                                              .toUpperCase()
+                                        : '?',
+                                    style: TextStyle(
+                                      color: AppColors.accentColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 24),
-                    Text(
+
+                    const Text(
                       'الخدمة',
+                      textAlign: TextAlign.right,
                       style: TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 16,
@@ -465,91 +567,91 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardColor,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColors.borderColor),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppColors.accentColor.withOpacity(0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.cut_rounded,
-                              color: AppColors.accentColor,
-                              size: 20,
-                            ),
+
+                    // بطاقة الخدمة مع إضاءة Led
+                    AnimatedBuilder(
+                      animation: _ledController,
+                      builder: (context, child) {
+                        return CustomPaint(
+                          foregroundPainter: LedBorderPainter(
+                            animationValue: _ledController.value,
+                            glowColor: AppColors.accentColor,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppColors.cardColor,
+                              borderRadius: BorderRadius.circular(22),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
                               children: [
                                 Text(
-                                  booking.service?.name ?? '',
+                                  '${booking.service?.price ?? 0} \$',
                                   style: TextStyle(
-                                    color: AppColors.textPrimary,
+                                    color: AppColors.accentColor,
                                     fontSize: 15,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${booking.service?.durationMinutes ?? 0} دقيقة',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 12,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        booking.service?.name ?? '',
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${booking.service?.durationMinutes ?? 0} دقيقة',
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          color: AppColors.textSecondary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accentColor.withOpacity(
+                                      0.12,
+                                    ),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    Icons.cut_rounded,
+                                    color: AppColors.accentColor,
+                                    size: 20,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${booking.service?.price ?? 0} \$',
-                            style: TextStyle(
-                              color: AppColors.accentColor,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     ),
+
                     if (isPending) ...[
                       const SizedBox(height: 36),
                       Row(
                         children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 54,
-                              child: OutlinedButton(
-                                onPressed: isLoading
-                                    ? null
-                                    : () => _respond('REJECT'),
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: AppColors.errorColor),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                child: Text(
-                                  'رفض',
-                                  style: TextStyle(
-                                    color: AppColors.errorColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
                           Expanded(
                             child: SizedBox(
                               height: 54,
@@ -581,6 +683,30 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: SizedBox(
+                              height: 54,
+                              child: OutlinedButton(
+                                onPressed: isLoading
+                                    ? null
+                                    : () => _respond('REJECT'),
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(color: AppColors.errorColor),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: Text(
+                                  'رفض',
+                                  style: TextStyle(
+                                    color: AppColors.errorColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -617,45 +743,64 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         ? Icons.play_circle_outline_rounded
         : Icons.timer_outlined;
 
-    // تغيير العنوان بما يناسب حالة الحجز
     final titleText = isCompleted
         ? 'حالة الخدمة'
         : isFinished
         ? 'حالة الموعد'
         : 'الوقت المتبقي';
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
-      decoration: BoxDecoration(
-        color: countdownColor.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: countdownColor.withOpacity(0.35)),
-      ),
-      child: Column(
-        children: [
-          Icon(countdownIcon, color: countdownColor, size: 30),
-          const SizedBox(height: 10),
-          Text(
-            titleText,
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+    return AnimatedBuilder(
+      animation: _ledController,
+      builder: (context, child) {
+        return CustomPaint(
+          foregroundPainter: LedBorderPainter(
+            animationValue: _ledController.value,
+            glowColor: countdownColor,
+          ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+            decoration: BoxDecoration(
+              color: AppColors.cardColor,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Icon(countdownIcon, color: countdownColor, size: 30),
+                const SizedBox(height: 10),
+                Text(
+                  titleText,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildRemainingTimeDisplay(countdownColor),
+                if (!isCompleted) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    _countdownSubtitle(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          _buildRemainingTimeDisplay(countdownColor),
-          if (!isCompleted) ...[
-            const SizedBox(height: 4),
-            Text(
-              _countdownSubtitle(),
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
-            ),
-          ],
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -714,7 +859,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          '${part.value}',
+          part.unit,
           style: TextStyle(
             color: countdownColor,
             fontSize: 22,
@@ -723,7 +868,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         ),
         const SizedBox(width: 6),
         Text(
-          part.unit,
+          '${part.value}',
           style: TextStyle(
             color: countdownColor,
             fontSize: 22,
@@ -769,4 +914,58 @@ class _TimePart {
   final int value;
   final String unit;
   const _TimePart(this.value, this.unit);
+}
+
+// رسم الإطار الضوئي المتوهج (Led Effect)
+class LedBorderPainter extends CustomPainter {
+  final double animationValue;
+  final Color glowColor;
+
+  LedBorderPainter({required this.animationValue, required this.glowColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rpath = RRect.fromRectAndRadius(rect, const Radius.circular(22));
+
+    final basePaint = Paint()
+      ..color = glowColor.withOpacity(0.18)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawRRect(rpath, basePaint);
+
+    const double sweepAngle = 2 * 3.141592653589793;
+    final double startAngle = animationValue * sweepAngle;
+
+    final ledPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..shader = SweepGradient(
+        colors: [
+          Colors.transparent,
+          glowColor.withOpacity(0.1),
+          glowColor,
+          Colors.white,
+          glowColor,
+          glowColor.withOpacity(0.1),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.4, 0.48, 0.5, 0.52, 0.6, 1.0],
+        transform: GradientRotation(startAngle),
+      ).createShader(rect);
+
+    final glowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5.0
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0)
+      ..shader = ledPaint.shader;
+
+    canvas.drawRRect(rpath, glowPaint);
+    canvas.drawRRect(rpath, ledPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant LedBorderPainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue;
+  }
 }

@@ -35,7 +35,7 @@ class _FreeSlotsScreenState extends State<FreeSlotsScreen>
     super.initState();
     _ledController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 4000),
     )..repeat();
 
     _freeSlotsCubit.getFreeSlots();

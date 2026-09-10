@@ -13,8 +13,19 @@ class DaySlotsDetailScreen extends StatefulWidget {
 }
 
 class _DaySlotsDetailScreenState extends State<DaySlotsDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _pulseController;
+  late AnimationController _ledController;
+
+  static const Map<int, String> _weekDaysMap = {
+    DateTime.monday: 'الإثنين',
+    DateTime.tuesday: 'الثلاثاء',
+    DateTime.wednesday: 'الأربعاء',
+    DateTime.thursday: 'الخميس',
+    DateTime.friday: 'الجمعة',
+    DateTime.saturday: 'السبت',
+    DateTime.sunday: 'الأحد',
+  };
 
   @override
   void initState() {
@@ -23,11 +34,17 @@ class _DaySlotsDetailScreenState extends State<DaySlotsDetailScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+
+    _ledController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4000),
+    )..repeat();
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
+    _ledController.dispose();
     super.dispose();
   }
 
@@ -68,166 +85,299 @@ class _DaySlotsDetailScreenState extends State<DaySlotsDetailScreen>
   Widget build(BuildContext context) {
     final freeWindows = widget.dayData.freeWindows ?? [];
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: AppColors.textPrimary,
-            size: 20,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundColor,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: AppColors.accentColor,
+              size: 20,
+            ),
+            onPressed: () => Navigator.pop(context),
           ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Column(
-          children: [
-            Text(
-              widget.dayData.date ?? 'تفاصيل اليوم',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
+          title: Column(
+            children: [
+              const Text(
+                'جدول أوقات الفراغ',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'جدول أوقات الفراغ',
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
+              const SizedBox(height: 2),
+              Text(
+                widget.dayData.date ?? '',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // بطاقة المخطط البصري الفاخرة لساعات الدوام
-            _buildHeaderDashboard(freeWindows.length),
-            const SizedBox(height: 28),
+        body: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // صندوقان متجاوران في بداية الـ Body (التاريخ واليوم)
+              _buildTodayHeaderRow(),
+              const SizedBox(height: 18),
 
-            // عنوان القائمة مع شارة حية
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 18,
-                      decoration: BoxDecoration(
+              // بطاقة المخطط البصري لساعات الدوام
+              _buildHeaderDashboard(freeWindows.length),
+              const SizedBox(height: 28),
+
+              // عنوان القائمة مع شارة حية
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: AppColors.accentColor,
+                          borderRadius: BorderRadius.circular(2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.accentColor.withOpacity(0.6),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'أوقات الفراغ المتاحة',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: AppColors.accentColor.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Text(
+                      '${freeWindows.length} فترات',
+                      style: const TextStyle(
                         color: AppColors.accentColor,
-                        borderRadius: BorderRadius.circular(2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.accentColor.withOpacity(0.6),
-                            blurRadius: 6,
-                          ),
-                        ],
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'أوقات الفراغ المتاحة',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
                   ),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: AppColors.accentColor.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Text(
-                    '${freeWindows.length} فترات',
-                    style: TextStyle(
-                      color: AppColors.accentColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // قائمة الفترات أو حالة الفراغ
-            if (freeWindows.isEmpty)
-              _buildEmptyState()
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: freeWindows.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 14),
-                itemBuilder: (context, index) {
-                  final window = freeWindows[index];
-                  return _buildWindowCard(window, index + 1);
-                },
+                ],
               ),
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 16),
+
+              // قائمة الفترات أو حالة الفراغ
+              if (freeWindows.isEmpty)
+                _buildEmptyState()
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: freeWindows.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) {
+                    final window = freeWindows[index];
+                    return _buildWindowCard(window, index + 1);
+                  },
+                ),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Dashboard بطاقة أعلى الشاشة المتقدمة
+  // صندوقان في أول البودي (التاريخ واليوم المختار) مع إضاءة Led
+  Widget _buildTodayHeaderRow() {
+    final rawDate = widget.dayData.date;
+    final parsedDate = rawDate != null ? DateTime.tryParse(rawDate) : null;
+    final dayName = parsedDate != null
+        ? _weekDaysMap[parsedDate.weekday] ?? ''
+        : '';
+
+    return Row(
+      children: [
+        // صندوق التاريخ
+        Expanded(
+          flex: 3,
+          child: AnimatedBuilder(
+            animation: _ledController,
+            builder: (context, child) {
+              return CustomPaint(
+                foregroundPainter: LedBorderPainter(
+                  animationValue: _ledController.value,
+                  glowColor: AppColors.accentColor,
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.cardColor,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.accentColor.withOpacity(0.12),
+                          border: Border.all(
+                            color: AppColors.accentColor.withOpacity(0.3),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.calendar_today_rounded,
+                          color: AppColors.accentColor,
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'التاريخ',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            rawDate ?? 'غير محدد',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        // صندوق اليوم
+        Expanded(
+          flex: 2,
+          child: AnimatedBuilder(
+            animation: _ledController,
+            builder: (context, child) {
+              return CustomPaint(
+                foregroundPainter: LedBorderPainter(
+                  animationValue: _ledController.value,
+                  glowColor: AppColors.accentColor,
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.cardColor,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'اليوم',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        dayName.isNotEmpty ? dayName : '—',
+                        style: const TextStyle(
+                          color: AppColors.accentColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Dashboard بطاقة أعلى الشاشة مع إطار متوهج
   Widget _buildHeaderDashboard(int freeSlotsCount) {
     final startTime = widget.dayData.workingHours?.startTime ?? '--:--';
     final endTime = widget.dayData.workingHours?.endTime ?? '--:--';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: AppColors.accentColor.withOpacity(0.25),
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+    return AnimatedBuilder(
+      animation: _ledController,
+      builder: (context, child) {
+        return CustomPaint(
+          foregroundPainter: LedBorderPainter(
+            animationValue: _ledController.value,
+            glowColor: AppColors.accentColor,
           ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // خلفية توهج جمالية خفيفة
-          Positioned(
-            top: -20,
-            right: -20,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accentColor.withOpacity(0.08),
-              ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.cardColor,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-          ),
-          Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,14 +393,14 @@ class _DaySlotsDetailScreenState extends State<DaySlotsDetailScreen>
                             color: AppColors.accentColor.withOpacity(0.15),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
+                          child: const Icon(
                             Icons.access_time_filled_rounded,
                             color: AppColors.accentColor,
                             size: 20,
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Text(
+                        const Text(
                           'نطاق الدوام الكامل',
                           style: TextStyle(
                             color: AppColors.textPrimary,
@@ -283,9 +433,9 @@ class _DaySlotsDetailScreenState extends State<DaySlotsDetailScreen>
                           height: 10,
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
+                            gradient: const LinearGradient(
                               colors: [
-                                AppColors.accentColor.withOpacity(0.5),
+                                Color(0x80FFD700),
                                 AppColors.accentColor,
                                 Colors.amberAccent,
                               ],
@@ -328,8 +478,8 @@ class _DaySlotsDetailScreenState extends State<DaySlotsDetailScreen>
               ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -397,11 +547,14 @@ class _DaySlotsDetailScreenState extends State<DaySlotsDetailScreen>
           children: [
             Text(
               label,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 10),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 10,
+              ),
             ),
             Text(
               time,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w800,
                 fontSize: 14,
@@ -413,129 +566,144 @@ class _DaySlotsDetailScreenState extends State<DaySlotsDetailScreen>
     );
   }
 
-  // بطاقات فترات الفراغ الفاخرة
+  // بطاقات فترات الفراغ مع تأثير الإطار المتوهج
   Widget _buildWindowCard(FreeWindow window, int index) {
     final durationMinutes = _calculateDurationInMinutes(window.from, window.to);
     final durationText = _formatDuration(durationMinutes);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.accentColor.withOpacity(0.18),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return AnimatedBuilder(
+      animation: _ledController,
+      builder: (context, child) {
+        return CustomPaint(
+          foregroundPainter: LedBorderPainter(
+            animationValue: _ledController.value,
+            glowColor: AppColors.accentColor,
           ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          // شارة رقم الفترة
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.accentColor.withOpacity(0.25),
-                  AppColors.accentColor.withOpacity(0.08),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.accentColor.withOpacity(0.3)),
-            ),
-            child: Text(
-              'فترة $index',
-              style: TextStyle(
-                color: AppColors.accentColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-
-          // تفاصيل الوقت المنتصف
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      window.from ?? '--:--',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Icon(
-                        Icons.arrow_right_alt_rounded,
-                        color: AppColors.accentColor,
-                        size: 20,
-                      ),
-                    ),
-                    Text(
-                      window.to ?? '--:--',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+              color: AppColors.cardColor,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-          ),
-
-          // شارة مدة الفترة بالوقت
-          if (durationText.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: AppColors.backgroundColor,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: AppColors.textSecondary.withOpacity(0.2),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.timer_outlined,
-                    size: 13,
-                    color: AppColors.accentColor,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                // شارة رقم الفترة
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    durationText,
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.accentColor.withOpacity(0.25),
+                        AppColors.accentColor.withOpacity(0.08),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppColors.accentColor.withOpacity(0.3),
                     ),
                   ),
-                ],
-              ),
+                  child: Text(
+                    'فترة $index',
+                    style: const TextStyle(
+                      color: AppColors.accentColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+
+                // تفاصيل الوقت المنتصف
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            window.from ?? '--:--',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            child: Icon(
+                              Icons.arrow_right_alt_rounded,
+                              color: AppColors.accentColor,
+                              size: 20,
+                            ),
+                          ),
+                          Text(
+                            window.to ?? '--:--',
+                            style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // شارة مدة الفترة بالوقت
+                if (durationText.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.backgroundColor,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppColors.textSecondary.withOpacity(0.2),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.timer_outlined,
+                          size: 13,
+                          color: AppColors.accentColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          durationText,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 
-  // شاشة الشاغر الفارغ المصممة
+  // شاشة الشاغر الفارغ
   Widget _buildEmptyState() {
     return Container(
       width: double.infinity,
@@ -553,7 +721,7 @@ class _DaySlotsDetailScreenState extends State<DaySlotsDetailScreen>
             color: AppColors.textSecondary.withOpacity(0.4),
           ),
           const SizedBox(height: 12),
-          Text(
+          const Text(
             'لا تتوفر فترات فراغ بهذا اليوم',
             style: TextStyle(
               color: AppColors.textPrimary,
@@ -562,12 +730,66 @@ class _DaySlotsDetailScreenState extends State<DaySlotsDetailScreen>
             ),
           ),
           const SizedBox(height: 4),
-          Text(
+          const Text(
             'يبدو أن جدول هذا اليوم ممتلئ بالكامل',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
           ),
         ],
       ),
     );
+  }
+}
+
+// رسم الإطار الضوئي المتوهج (Led Effect)
+class LedBorderPainter extends CustomPainter {
+  final double animationValue;
+  final Color glowColor;
+
+  LedBorderPainter({required this.animationValue, required this.glowColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rpath = RRect.fromRectAndRadius(rect, const Radius.circular(22));
+
+    final basePaint = Paint()
+      ..color = glowColor.withOpacity(0.18)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawRRect(rpath, basePaint);
+
+    const double sweepAngle = 2 * 3.141592653589793;
+    final double startAngle = animationValue * sweepAngle;
+
+    final ledPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
+      ..shader = SweepGradient(
+        colors: [
+          Colors.transparent,
+          glowColor.withOpacity(0.1),
+          glowColor,
+          Colors.white,
+          glowColor,
+          glowColor.withOpacity(0.1),
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.4, 0.48, 0.5, 0.52, 0.6, 1.0],
+        transform: GradientRotation(startAngle),
+      ).createShader(rect);
+
+    final glowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5.0
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0)
+      ..shader = ledPaint.shader;
+
+    canvas.drawRRect(rpath, glowPaint);
+    canvas.drawRRect(rpath, ledPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant LedBorderPainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue;
   }
 }
