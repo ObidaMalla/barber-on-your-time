@@ -78,11 +78,20 @@ class _RequestAvailabilityScreenState extends State<RequestAvailabilityScreen> {
   }
 
   Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // التأكد من أن التاريخ الأولي ليس قديماً (قبل اليوم)
+    DateTime initial = _selectedDate ?? today;
+    if (initial.isBefore(today)) {
+      initial = today;
+    }
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: initial,
+      firstDate: today,
+      lastDate: today.add(const Duration(days: 365)),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(

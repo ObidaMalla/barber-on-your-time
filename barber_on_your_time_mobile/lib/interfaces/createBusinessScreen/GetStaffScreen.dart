@@ -64,7 +64,10 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
+                        const Text('جاري إنهاء الخدمات...'),
+                        const SizedBox(width: 12),
                         SizedBox(
                           width: 18,
                           height: 18,
@@ -73,8 +76,6 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
                             color: AppColors.backgroundColor,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        const Text('جاري إنهاء الخدمات...'),
                       ],
                     ),
                     backgroundColor: AppColors.cardColor,
@@ -87,6 +88,7 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
                   SnackBar(
                     content: Text(
                       data.message ?? 'تم إنهاء خدمات الموظف بنجاح',
+                      textAlign: TextAlign.right,
                     ),
                     backgroundColor: Colors.green,
                   ),
@@ -120,12 +122,6 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
             ),
           ),
           centerTitle: true,
-          actions: [
-            IconButton(
-              onPressed: () => _getStaffCubit.fetchStaff(),
-              icon: Icon(Icons.refresh_rounded, color: AppColors.accentColor),
-            ),
-          ],
         ),
         body: BlocBuilder<GetStaffCubit, ResultState<GetStaffModel>>(
           bloc: _getStaffCubit,
@@ -263,44 +259,60 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive
-                  ? AppColors.accentColor.withOpacity(0.12)
-                  : Colors.redAccent.withOpacity(0.12),
-              border: Border.all(
-                color: isActive
-                    ? AppColors.accentColor.withOpacity(0.3)
-                    : Colors.redAccent.withOpacity(0.3),
+          // 1. زر الخيارات (أقصى اليمين) إذا كان الموظف نشطاً
+          if (isActive)
+            PopupMenuButton<String>(
+              icon: Icon(
+                Icons.more_vert_rounded,
+                color: AppColors.textSecondary,
               ),
+              color: AppColors.cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: AppColors.accentColor.withOpacity(0.2)),
+              ),
+              onSelected: (value) {
+                if (value == 'delete') {
+                  _showDeleteConfirmationDialog(staff);
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: const [
+                      Text(
+                        'إنهاء الخدمات',
+                        style: TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(width: 10),
+                      Icon(
+                        Icons.person_remove_rounded,
+                        color: Colors.redAccent,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            child: Icon(
-              Icons.content_cut_rounded,
-              color: isActive ? AppColors.accentColor : Colors.redAccent,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 14),
 
+          if (isActive) const SizedBox(width: 8),
+
+          // 2. معلومات الموظف (الاسم، البريد، وحالة منتهي الخدمة)
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text(
-                      staff.user?.name ?? 'بدون اسم',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                     if (!isActive) ...[
-                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -322,12 +334,23 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                     ],
+                    Text(
+                      staff.user?.name ?? 'بدون اسم',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   staff.user?.email ?? '',
+                  textAlign: TextAlign.right,
                   style: TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,
@@ -336,48 +359,29 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
               ],
             ),
           ),
+          const SizedBox(width: 14),
 
-          // إذا كان الموظف نشطاً فقط يتم إظهار زر الخيارات
-          if (isActive)
-            PopupMenuButton<String>(
-              icon: Icon(
-                Icons.more_vert_rounded,
-                color: AppColors.textSecondary,
+          // 3. الأيقونة الخاصة بالموظف (أقصى اليسار داخل البطاقة)
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isActive
+                  ? AppColors.accentColor.withOpacity(0.12)
+                  : Colors.redAccent.withOpacity(0.12),
+              border: Border.all(
+                color: isActive
+                    ? AppColors.accentColor.withOpacity(0.3)
+                    : Colors.redAccent.withOpacity(0.3),
               ),
-              color: AppColors.cardColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: AppColors.accentColor.withOpacity(0.2)),
-              ),
-              onSelected: (value) {
-                if (value == 'delete') {
-                  _showDeleteConfirmationDialog(staff);
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: const [
-                      Icon(
-                        Icons.person_remove_rounded,
-                        color: Colors.redAccent,
-                        size: 20,
-                      ),
-                      SizedBox(width: 10),
-                      Text(
-                        'إنهاء الخدمات',
-                        style: TextStyle(
-                          color: Colors.redAccent,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ),
+            child: Icon(
+              Icons.content_cut_rounded,
+              color: isActive ? AppColors.accentColor : Colors.redAccent,
+              size: 24,
+            ),
+          ),
         ],
       ),
     );
@@ -414,6 +418,7 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'إنهاء خدمات الموظف؟',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 18,
@@ -422,7 +427,7 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'هل أنت تأكد من طرد "${staff.user?.name}"؟ سيتم تحويل حروجه المعلقة للحلاقين الآخرين.',
+                  'هل أنت متأكد من طرد "${staff.user?.name}"؟ سيتم تحويل حروجه المعلقة للحلاقين الآخرين.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.textSecondary,
@@ -432,16 +437,6 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(dialogContext),
-                        child: Text(
-                          'إلغاء',
-                          style: TextStyle(color: AppColors.textSecondary),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
@@ -459,6 +454,16 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
                         child: const Text(
                           'تأكيد الطرد',
                           style: TextStyle(color: Colors.white, fontSize: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: Text(
+                          'إلغاء',
+                          style: TextStyle(color: AppColors.textSecondary),
                         ),
                       ),
                     ),

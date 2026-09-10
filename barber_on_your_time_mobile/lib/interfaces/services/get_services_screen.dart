@@ -238,25 +238,24 @@ class _GetServicesScreenState extends State<GetServicesScreen> {
 
           floatingActionButton: (_isOwner && !_isSelectionMode)
               ? Padding(
-                  padding: const EdgeInsets.only(bottom: 75),
-                  child: FloatingActionButton.extended(
-                    onPressed: _navigateToAddService,
-                    backgroundColor: AppColors.accentColor,
-                    elevation: 8,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    icon: Icon(
-                      Icons.add_rounded,
-                      color: AppColors.backgroundColor,
-                      size: 22,
-                    ),
-                    label: Text(
-                      'إضافة خدمة',
-                      style: TextStyle(
-                        color: AppColors.backgroundColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                  // ⬆️ تم رفع الزر قليلاً بزيادة المسافة من الأسفل
+                  padding: const EdgeInsets.only(bottom: 95),
+                  child: Tooltip(
+                    message: 'إضافة خدمة',
+                    child: FloatingActionButton(
+                      onPressed: _navigateToAddService,
+                      backgroundColor: AppColors.backgroundColor,
+                      elevation: 4,
+                      shape: CircleBorder(
+                        side: BorderSide(
+                          color: AppColors.accentColor,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.add_rounded,
+                        color: AppColors.accentColor,
+                        size: 26,
                       ),
                     ),
                   ),
@@ -377,11 +376,7 @@ class _GetServicesScreenState extends State<GetServicesScreen> {
       ),
       centerTitle: true,
       actions: [
-        const NotificationBellIcon(), // 👈 جديد — أيقونة الجرس مع الـ badge
-        IconButton(
-          onPressed: () => _getServicesCubit.fetchServices(),
-          icon: Icon(Icons.refresh_rounded, color: AppColors.accentColor),
-        ),
+        const Tooltip(message: 'الإشعارات', child: NotificationBellIcon()),
       ],
     );
   }
@@ -391,9 +386,12 @@ class _GetServicesScreenState extends State<GetServicesScreen> {
     return AppBar(
       backgroundColor: AppColors.cardColor,
       elevation: 0,
-      leading: IconButton(
-        onPressed: _exitSelectionMode,
-        icon: Icon(Icons.close_rounded, color: AppColors.textPrimary),
+      leading: Tooltip(
+        message: 'إلغاء التحديد',
+        child: IconButton(
+          onPressed: _exitSelectionMode,
+          icon: Icon(Icons.close_rounded, color: AppColors.textPrimary),
+        ),
       ),
       title: Text(
         '${_selectedServiceIds.length} محدد',
@@ -404,15 +402,18 @@ class _GetServicesScreenState extends State<GetServicesScreen> {
         ),
       ),
       actions: [
-        IconButton(
-          onPressed: _selectedServiceIds.isNotEmpty
-              ? _confirmDeleteSelected
-              : null,
-          icon: Icon(
-            Icons.delete_outline_rounded,
-            color: _selectedServiceIds.isNotEmpty
-                ? Colors.redAccent
-                : AppColors.textSecondary.withOpacity(0.4),
+        Tooltip(
+          message: 'حذف المحدد',
+          child: IconButton(
+            onPressed: _selectedServiceIds.isNotEmpty
+                ? _confirmDeleteSelected
+                : null,
+            icon: Icon(
+              Icons.delete_outline_rounded,
+              color: _selectedServiceIds.isNotEmpty
+                  ? Colors.redAccent
+                  : AppColors.textSecondary.withOpacity(0.4),
+            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -494,13 +495,90 @@ class _GetServicesScreenState extends State<GetServicesScreen> {
         ),
         child: Row(
           children: [
-            // ===== دائرة التحديد - تظهر بس بوضع التحديد =====
+            // 1. سعر الخدمة (أقصى اليمين)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.accentColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.accentColor.withOpacity(0.3),
+                ),
+              ),
+              child: Text(
+                '${service.price ?? 0} \$',
+                style: TextStyle(
+                  color: AppColors.accentColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+
+            // 2. معلومات الخدمة
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    service.name ?? 'بدون اسم',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${service.durationMinutes ?? 0} دقيقة',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 14),
+
+            // 3. أيقونة الخدمة
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.accentColor.withOpacity(0.12),
+                border: Border.all(
+                  color: AppColors.accentColor.withOpacity(0.3),
+                ),
+              ),
+              child: Icon(
+                Icons.cut_rounded,
+                color: AppColors.accentColor,
+                size: 24,
+              ),
+            ),
+
+            // 4. دائرة التحديد المتعدد
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: _isSelectionMode
                   ? Padding(
                       key: const ValueKey('selector'),
-                      padding: const EdgeInsets.only(right: 12),
+                      padding: const EdgeInsets.only(left: 12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 150),
                         width: 24,
@@ -527,75 +605,6 @@ class _GetServicesScreenState extends State<GetServicesScreen> {
                       ),
                     )
                   : const SizedBox(key: ValueKey('empty'), width: 0),
-            ),
-
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accentColor.withOpacity(0.12),
-                border: Border.all(
-                  color: AppColors.accentColor.withOpacity(0.3),
-                ),
-              ),
-              child: Icon(
-                Icons.cut_rounded,
-                color: AppColors.accentColor,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    service.name ?? 'بدون اسم',
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time_rounded,
-                        size: 14,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${service.durationMinutes ?? 0} دقيقة',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.accentColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: AppColors.accentColor.withOpacity(0.3),
-                ),
-              ),
-              child: Text(
-                '${service.price ?? 0} \$',
-                style: TextStyle(
-                  color: AppColors.accentColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
             ),
           ],
         ),

@@ -1,0 +1,47 @@
+{
+    "success": true,
+    "statusCode": 200,
+    "message": "تم جلب الإشعارات بنجاح",
+    "data": {
+        "notifications": [
+            {
+                "id": "fd579277-921e-42fd-a26f-d13a47fd20be",
+                "userId": 7,
+                "type": "WELCOME",
+                "title": "أهلاً وسهلاً 👋",
+                "message": "مرحباً بك يا obida!",
+                "data": {},
+                "isRead": false,
+                "createdAt": "2026-09-10T05:21:38.844Z"
+            }
+        ],
+        "pagination": {
+            "total": 1,
+            "page": 1,
+            "limit": 10,
+            "totalPages": 1
+        }
+    }
+}
+                "id": "fd579277-921e-42fd-a26f-d13a47fd20be",ليش هيك ال id??
+هيك عادي ومتوقع 100% — هاد نوعو UUID (Universally Unique Identifier)، مش رقم عادي متل باقي الجداول (User, Task, إلخ).
+
+ليش بالتحديد هيك بجدول Notification
+
+رجعلنا لتعريف الموديل بـ schema.prisma:
+
+prisma
+model Notification {
+  id        String           @id @default(uuid())  // 👈 هون السبب
+  userId    Int
+  ...
+}
+
+بعكس باقي الجداول عندك (User, Task, Business...) يلي مستخدمة:
+
+prisma
+id Int @id @default(autoincrement())  // 1, 2, 3, 4...
+ليش اخترنا UUID بالذات لهاد الجدول من الأول
+الإشعارات كتيرة جداً وسريعة الإنشاء — كل حجز، كل رد، كل تسجيل دخول بيولّد إشعار. UUID بيضمن ما في تصادم بالـ id حتى لو انولدت آلاف الإشعارات بنفس الثانية من عمليات متوازية.
+مش لازم ترتيب تسلسلي — عكس Task أو User يلي أحياناً بتحتاج تعرف "مين انضاف قبل مين" بالرقم نفسو، الإشعار ترتيبو بيجي من createdAt، مش من الـ id.
+أكتر أماناً — رقم متسلسل (1, 2, 3...) بيخلي حدا يخمن بسهولة "شكل" باقي الإشعارات (عدها الكلي مثلاً)، بينما UUID عشوائي تماماً.

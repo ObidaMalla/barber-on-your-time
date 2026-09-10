@@ -9,7 +9,6 @@ import '../../models/availabilityOwner/answer_request_model.dart';
 import '../../models/availabilityOwner/get_owner_pending_requests_model.dart';
 
 class RequestDetailsScreen extends StatefulWidget {
-
   final OwnerPendingRequestData request;
 
   const RequestDetailsScreen({super.key, required this.request});
@@ -67,118 +66,125 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
     final staffName = request.staff?.user?.name ?? 'موظف غير معروف';
     final staffEmail = request.staff?.user?.email;
 
-    return BlocProvider.value(
-      value: _cubit,
-      child: BlocConsumer<AnswerRequestCubit, ResultState<AnswerRequestModel>>(
-        listener: (context, state) {
-          state.whenOrNull(
-            success: (data) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(data.message ?? 'تم تسجيل الرد 🎉'),
-                  backgroundColor: AppColors.successColor,
-                ),
-              );
-              Navigator.pop(context, true);
-            },
-            error: (message) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(message),
-                  backgroundColor: AppColors.errorColor,
-                ),
-              );
-            },
-          );
-        },
-        builder: (context, state) {
-          final isLoading = state.maybeWhen(
-            loading: () => true,
-            orElse: () => false,
-          );
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: BlocProvider.value(
+        value: _cubit,
+        child:
+            BlocConsumer<AnswerRequestCubit, ResultState<AnswerRequestModel>>(
+              listener: (context, state) {
+                state.whenOrNull(
+                  success: (data) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(data.message ?? 'تم تسجيل الرد 🎉'),
+                        backgroundColor: AppColors.successColor,
+                      ),
+                    );
+                    Navigator.pop(context, true);
+                  },
+                  error: (message) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(message),
+                        backgroundColor: AppColors.errorColor,
+                      ),
+                    );
+                  },
+                );
+              },
+              builder: (context, state) {
+                final isLoading = state.maybeWhen(
+                  loading: () => true,
+                  orElse: () => false,
+                );
 
-          return Scaffold(
-            backgroundColor: AppColors.backgroundColor,
-            appBar: AppBar(
-              backgroundColor: AppColors.backgroundColor,
-              elevation: 0,
-              centerTitle: true,
-              title: Text(
-                'تفاصيل الطلب',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            body: SafeArea(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 20,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeaderCard(typeLabel, staffName),
-                    const SizedBox(height: 28),
-                    Text(
-                      'تفاصيل الموظف',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildInfoRow(Icons.person_rounded, 'الاسم', staffName),
-                    if (staffEmail != null)
-                      _buildInfoRow(
-                        Icons.email_rounded,
-                        'البريد الإلكتروني',
-                        staffEmail,
-                      ),
-                    const SizedBox(height: 24),
-                    Text(
+                return Scaffold(
+                  backgroundColor: AppColors.backgroundColor,
+                  appBar: AppBar(
+                    backgroundColor: AppColors.backgroundColor,
+                    elevation: 0,
+                    centerTitle: true,
+                    title: Text(
                       'تفاصيل الطلب',
                       style: TextStyle(
                         color: AppColors.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    _buildInfoRow(
-                      Icons.event_rounded,
-                      'اليوم',
-                      _getDayName(request.dayOfWeek),
-                    ),
-                    _buildInfoRow(
-                      Icons.access_time_rounded,
-                      'من',
-                      request.startTime ?? '--:--',
-                    ),
-                    _buildInfoRow(
-                      Icons.access_time_filled_rounded,
-                      'إلى',
-                      request.endTime ?? '--:--',
-                    ),
-                    if (request.availabilityId != null)
-                      _buildInfoRow(
-                        Icons.tag_rounded,
-                        'رقم الدوام الأصلي',
-                        '#${request.availabilityId}',
+                  ),
+                  body: SafeArea(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 20,
                       ),
-                    const SizedBox(height: 40),
-                    _buildActionButtons(isLoading),
-                  ],
-                ),
-              ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _LightSweepBorder(
+                            borderRadius: 26,
+                            borderColor: Colors.teal,
+                            borderThickness: 2.5,
+                            child: _buildHeaderCard(typeLabel, staffName),
+                          ),
+                          const SizedBox(height: 28),
+                          Text(
+                            'تفاصيل الموظف',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildInfoRow(
+                            Icons.person_rounded,
+                            'الاسم',
+                            staffName,
+                          ),
+                          if (staffEmail != null)
+                            _buildInfoRow(
+                              Icons.email_rounded,
+                              'البريد الإلكتروني',
+                              staffEmail,
+                            ),
+                          const SizedBox(height: 24),
+                          Text(
+                            'تفاصيل الطلب',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildInfoRow(
+                            Icons.event_rounded,
+                            'اليوم',
+                            _getDayName(request.dayOfWeek),
+                          ),
+                          _buildInfoRow(
+                            Icons.access_time_rounded,
+                            'من',
+                            request.startTime ?? '--:--',
+                          ),
+                          _buildInfoRow(
+                            Icons.access_time_filled_rounded,
+                            'إلى',
+                            request.endTime ?? '--:--',
+                          ),
+                          const SizedBox(height: 40),
+                          _buildActionButtons(isLoading),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
       ),
     );
   }
@@ -188,14 +194,13 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: AppColors.accentColor.withOpacity(0.2)),
+        color: Colors.teal.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -206,24 +211,45 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
             height: 70,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.accentColor.withOpacity(0.12),
-              border: Border.all(color: AppColors.accentColor.withOpacity(0.3)),
+              color: Colors.teal.withOpacity(0.2),
+              border: Border.all(color: Colors.teal, width: 1.5),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.fact_check_rounded,
-              color: AppColors.accentColor,
+              color: Colors.teal,
               size: 34,
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            typeLabel,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                typeLabel,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.orangeAccent.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'معلق',
+                  style: TextStyle(
+                    color: Colors.orangeAccent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
@@ -266,6 +292,7 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
   Widget _buildActionButtons(bool isLoading) {
     return Row(
       children: [
+        // زر الرفض
         Expanded(
           child: SizedBox(
             height: 54,
@@ -289,41 +316,105 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
           ),
         ),
         const SizedBox(width: 14),
+        // زر الموافقة (تم تحويله إلى OutlinedButton مفرغ بلون النجاح أو لون مميز)
         Expanded(
           child: SizedBox(
             height: 54,
-            child: ElevatedButton(
+            child: OutlinedButton(
               onPressed: isLoading ? null : () => _answer('APPROVE'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentColor,
-                disabledBackgroundColor: AppColors.accentColor.withOpacity(
-                  0.4,
-                ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: AppColors.successColor),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
               ),
               child: isLoading
                   ? SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  color: AppColors.backgroundColor,
-                  strokeWidth: 2.5,
-                ),
-              )
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: AppColors.successColor,
+                        strokeWidth: 2.5,
+                      ),
+                    )
                   : Text(
-                'موافقة',
-                style: TextStyle(
-                  color: AppColors.backgroundColor,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+                      'موافقة',
+                      style: TextStyle(
+                        color: AppColors.successColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+// =========================================================
+// Light Sweep Animation Border Widget
+// =========================================================
+class _LightSweepBorder extends StatefulWidget {
+  final Widget child;
+  final double borderRadius;
+  final Color borderColor;
+  final double borderThickness;
+
+  const _LightSweepBorder({
+    required this.child,
+    required this.borderRadius,
+    required this.borderColor,
+    this.borderThickness = 2.5,
+  });
+
+  @override
+  State<_LightSweepBorder> createState() => _LightSweepBorderState();
+}
+
+class _LightSweepBorderState extends State<_LightSweepBorder>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          padding: EdgeInsets.all(widget.borderThickness),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            gradient: SweepGradient(
+              center: Alignment.center,
+              transform: GradientRotation(_controller.value * 6.283185),
+              colors: [
+                widget.borderColor.withOpacity(0.15),
+                widget.borderColor,
+                widget.borderColor.withOpacity(0.15),
+              ],
+              stops: const [0.0, 0.25, 0.5],
+            ),
+          ),
+          child: widget.child,
+        );
+      },
     );
   }
 }

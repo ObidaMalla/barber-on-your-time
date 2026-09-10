@@ -71,63 +71,68 @@ class _OwnerPendingRequestsScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          'طلبات الدوام المعلقة',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundColor,
+        appBar: AppBar(
+          backgroundColor: AppColors.backgroundColor,
+          elevation: 0,
+          centerTitle: true,
+          title: Text(
+            'طلبات الدوام المعلقة',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
           ),
         ),
-      ),
-      body:
-          BlocBuilder<
-            OwnerPendingRequestsCubit,
-            ResultState<GetOwnerPendingRequestsModel>
-          >(
-            bloc: _cubit,
-            builder: (context, state) {
-              return state.when(
-                idle: () => const SizedBox.shrink(),
-                loading: () => Center(
-                  child: CircularProgressIndicator(
-                    color: AppColors.accentColor,
-                  ),
-                ),
-                error: (message) => _buildErrorWidget(message),
-                success: (data) {
-                  final list = data.data ?? [];
-                  if (list.isEmpty) {
-                    return _buildEmptyState();
-                  }
-
-                  return RefreshIndicator(
-                    color: AppColors.accentColor,
-                    backgroundColor: AppColors.cardColor,
-                    onRefresh: () async {
-                      // 👈 استدعاء دالة الجلب المعتمدة لديك في الـ Cubit
-                      await _cubit.fetchPendingRequests();
-                    },
-                    child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final item = list[index];
-                        return _buildRequestCard(item);
-                      },
+        body:
+            BlocBuilder<
+              OwnerPendingRequestsCubit,
+              ResultState<GetOwnerPendingRequestsModel>
+            >(
+              bloc: _cubit,
+              builder: (context, state) {
+                return state.when(
+                  idle: () => const SizedBox.shrink(),
+                  loading: () => Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.accentColor,
                     ),
-                  );
-                },
-              );
-            },
-          ),
+                  ),
+                  error: (message) => _buildErrorWidget(message),
+                  success: (data) {
+                    final list = data.data ?? [];
+                    if (list.isEmpty) {
+                      return _buildEmptyState();
+                    }
+
+                    return RefreshIndicator(
+                      color: AppColors.accentColor,
+                      backgroundColor: AppColors.cardColor,
+                      onRefresh: () async {
+                        await _cubit.fetchPendingRequests();
+                      },
+                      child: ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+                        itemCount: list.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 14),
+                        itemBuilder: (context, index) {
+                          final item = list[index];
+                          return _buildRequestCard(item);
+                        },
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+      ),
     );
   }
 
@@ -140,74 +145,93 @@ class _OwnerPendingRequestsScreenState
     return InkWell(
       onTap: () => _openDetails(item),
       borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.cardColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.accentColor.withOpacity(0.18)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accentColor.withOpacity(0.1),
-                border: Border.all(
-                  color: AppColors.accentColor.withOpacity(0.25),
+      child: _LightSweepBorder(
+        borderRadius: 20,
+        borderColor: Colors.teal,
+        borderThickness: 8,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.teal.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.orangeAccent.withOpacity(0.2),
+                  border: Border.all(
+                    color: Colors.orangeAccent.withOpacity(0.5),
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(icon, color: Colors.orangeAccent, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          _getDayName(item.dayOfWeek),
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orangeAccent.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'بانتظار الرد',
+                            style: TextStyle(
+                              color: Colors.orangeAccent,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$typeLabel  •  $staffName',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Icon(icon, color: AppColors.accentColor, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _getDayName(item.dayOfWeek),
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$typeLabel  •  $staffName',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16,
+                color: AppColors.textSecondary,
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                'معلق',
-                style: TextStyle(
-                  color: Colors.orange,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -284,6 +308,72 @@ class _OwnerPendingRequestsScreenState
           ],
         ),
       ),
+    );
+  }
+}
+
+// =========================================================
+// Light Sweep Animation Border Widget
+// =========================================================
+class _LightSweepBorder extends StatefulWidget {
+  final Widget child;
+  final double borderRadius;
+  final Color borderColor;
+  final double borderThickness;
+
+  const _LightSweepBorder({
+    required this.child,
+    required this.borderRadius,
+    required this.borderColor,
+    this.borderThickness = 2.5,
+  });
+
+  @override
+  State<_LightSweepBorder> createState() => _LightSweepBorderState();
+}
+
+class _LightSweepBorderState extends State<_LightSweepBorder>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          padding: EdgeInsets.all(widget.borderThickness),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            gradient: SweepGradient(
+              center: Alignment.center,
+              transform: GradientRotation(_controller.value * 6.283185),
+              colors: [
+                widget.borderColor.withOpacity(0.15),
+                widget.borderColor,
+                widget.borderColor.withOpacity(0.15),
+              ],
+              stops: const [0.0, 0.25, 0.5],
+            ),
+          ),
+          child: widget.child,
+        );
+      },
     );
   }
 }

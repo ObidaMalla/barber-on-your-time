@@ -90,7 +90,9 @@ class _GetAvailabilityScreenState extends State<GetAvailabilityScreen> {
         textDirection: TextDirection.rtl,
         child: AlertDialog(
           backgroundColor: AppColors.cardColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text(
             'طلب حذف الدوام',
             style: TextStyle(
