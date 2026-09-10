@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -64,9 +66,15 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
-  void _submitLogin(BuildContext context) {
+  void _submitLogin(
+    BuildContext context,
+    GlobalKey<_AnimatedSubmitButtonState> buttonKey,
+  ) {
     FocusScope.of(context).unfocus();
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      buttonKey.currentState?.shakeAndFlash();
+      return;
+    }
     context.read<LoginCubit>().loginUser(
       email: _emailController.text.trim(),
       password: _passwordController.text,
@@ -101,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen>
           ),
           backgroundColor: isSuccess
               ? AppColors.successColor
-              : AppColors.dangerColor,
+              : AppColors.errorColor,
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           shape: RoundedRectangleBorder(
@@ -114,220 +122,224 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundColor,
-      resizeToAvoidBottomInset: true,
-      body: BlocConsumer<LoginCubit, ResultState<LoginModel>>(
-        listener: (context, state) {
-          state.whenOrNull(
-            success: (userData) async {
-              if (userData.success != true) {
+    final GlobalKey<_AnimatedSubmitButtonState> buttonKey = GlobalKey();
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundColor,
+        resizeToAvoidBottomInset: true,
+        body: BlocConsumer<LoginCubit, ResultState<LoginModel>>(
+          listener: (context, state) {
+            state.whenOrNull(
+              success: (userData) async {
+                if (userData.success != true) {
+                  _showFloatingSnackBar(
+                    userData.message ?? 'فشلت عملية تسجيل الدخول',
+                    isSuccess: false,
+                  );
+                  buttonKey.currentState?.shakeAndFlash();
+                  return;
+                }
                 _showFloatingSnackBar(
-                  userData.message ?? 'فشلت عملية تسجيل الدخول',
-                  isSuccess: false,
+                  userData.message ?? 'تم تسجيل الدخول بنجاح 🚀',
+                  isSuccess: true,
                 );
-                return;
-              }
-              _showFloatingSnackBar(
-                userData.message ?? 'تم تسجيل الدخول بنجاح 🚀',
-                isSuccess: true,
-              );
-              await Future.delayed(const Duration(milliseconds: 700));
-              if (!mounted) return;
+                await Future.delayed(const Duration(milliseconds: 700));
+                if (!mounted) return;
 
-              final role = userData.data?.user?.role ?? 'CUSTOMER';
+                final role = userData.data?.user?.role ?? 'CUSTOMER';
 
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => MainScreen(userRole: role)),
-                (route) => false,
-              );
-            },
-            error: (error) => _showFloatingSnackBar(error, isSuccess: false),
-          );
-        },
-        builder: (context, state) {
-          final isLoading = state.maybeWhen(
-            loading: () => true,
-            orElse: () => false,
-          );
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => MainScreen(userRole: role)),
+                  (route) => false,
+                );
+              },
+              error: (error) {
+                _showFloatingSnackBar(error, isSuccess: false);
+                buttonKey.currentState?.shakeAndFlash();
+              },
+            );
+          },
+          builder: (context, state) {
+            final isLoading = state.maybeWhen(
+              loading: () => true,
+              orElse: () => false,
+            );
 
-          return Stack(
-            children: [
-              // خلفية متدرجة مع توهج خفيف خلف الشعار
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: const Alignment(0, -0.6),
-                      radius: 1.2,
-                      colors: [
-                        AppColors.primaryColor.withOpacity(0.12),
-                        AppColors.backgroundColor,
-                      ],
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: const Alignment(0, -0.6),
+                        radius: 1.2,
+                        colors: [
+                          AppColors.accentColor.withOpacity(0.12),
+                          AppColors.backgroundColor,
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              SafeArea(
-                child: GestureDetector(
-                  onTap: () => FocusScope.of(context).unfocus(),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 28,
-                        ),
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            minHeight: constraints.maxHeight - 56,
+                SafeArea(
+                  child: GestureDetector(
+                    onTap: () => FocusScope.of(context).unfocus(),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 28,
                           ),
-                          child: IntrinsicHeight(
-                            child: Column(
-                              children: [
-                                const Spacer(),
-
-                                // LOGO مع أنيميشن نبض دخول
-                                ScaleTransition(
-                                  scale: _logoScale,
-                                  child: _AnimatedLogo(),
-                                ),
-
-                                const SizedBox(height: 24),
-
-                                FadeTransition(
-                                  opacity: _cardFade,
-                                  child: SlideTransition(
-                                    position: _cardSlide,
-                                    child: Column(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight - 56,
+                            ),
+                            child: IntrinsicHeight(
+                              child: Column(
+                                children: [
+                                  const Spacer(),
+                                  ScaleTransition(
+                                    scale: _logoScale,
+                                    child: const _AnimatedLogo(),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  FadeTransition(
+                                    opacity: _cardFade,
+                                    child: SlideTransition(
+                                      position: _cardSlide,
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            'أهلاً بك مجدداً',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: AppColors.textPrimary,
+                                              fontSize: 30,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: -0.5,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'سجل دخولك لحجز موعدك القادم',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: AppColors.textSecondary,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 34),
+                                          _LoginCard(
+                                            key: const ValueKey('loginCard'),
+                                            formKey: _formKey,
+                                            emailController: _emailController,
+                                            passwordController:
+                                                _passwordController,
+                                            isPasswordObscured:
+                                                _isPasswordObscured,
+                                            onToggleObscure: () => setState(
+                                              () => _isPasswordObscured =
+                                                  !_isPasswordObscured,
+                                            ),
+                                            isLoading: isLoading,
+                                            onSubmit: () => _submitLogin(
+                                              context,
+                                              buttonKey,
+                                            ),
+                                            buttonKey: buttonKey,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 26),
+                                  FadeTransition(
+                                    opacity: _cardFade,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Text(
-                                          'Welcome Back',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: AppColors.textPrimary,
-                                            fontSize: 30,
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: -0.5,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Sign in to book your next cut',
-                                          textAlign: TextAlign.center,
+                                          "ليس لديك حساب؟ ",
                                           style: TextStyle(
                                             color: AppColors.textSecondary,
                                             fontSize: 14,
                                           ),
                                         ),
-                                        const SizedBox(height: 34),
-                                        _LoginCard(
-                                          formKey: _formKey,
-                                          emailController: _emailController,
-                                          passwordController:
-                                              _passwordController,
-                                          isPasswordObscured:
-                                              _isPasswordObscured,
-                                          onToggleObscure: () => setState(
-                                            () => _isPasswordObscured =
-                                                !_isPasswordObscured,
+                                        GestureDetector(
+                                          onTap: isLoading
+                                              ? null
+                                              : () {
+                                                  Navigator.push(
+                                                    context,
+                                                    PageRouteBuilder(
+                                                      transitionDuration:
+                                                          const Duration(
+                                                            milliseconds: 350,
+                                                          ),
+                                                      pageBuilder:
+                                                          (
+                                                            _,
+                                                            animation,
+                                                            __,
+                                                          ) => FadeTransition(
+                                                            opacity: animation,
+                                                            child:
+                                                                const RegisterScreen(),
+                                                          ),
+                                                    ),
+                                                  );
+                                                },
+                                          child: Text(
+                                            'إنشاء حساب جديد',
+                                            style: TextStyle(
+                                              color: AppColors.accentColor,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                           ),
-                                          isLoading: isLoading,
-                                          onSubmit: () => _submitLogin(context),
                                         ),
                                       ],
                                     ),
                                   ),
-                                ),
-
-                                const SizedBox(height: 26),
-
-                                FadeTransition(
-                                  opacity: _cardFade,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        "Don't have an account? ",
-                                        style: TextStyle(
-                                          color: AppColors.textSecondary,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      GestureDetector(
-                                        onTap: isLoading
-                                            ? null
-                                            : () {
-                                                Navigator.push(
-                                                  context,
-                                                  PageRouteBuilder(
-                                                    transitionDuration:
-                                                        const Duration(
-                                                          milliseconds: 350,
-                                                        ),
-                                                    pageBuilder:
-                                                        (
-                                                          _,
-                                                          animation,
-                                                          __,
-                                                        ) => FadeTransition(
-                                                          opacity: animation,
-                                                          child:
-                                                              const RegisterScreen(),
-                                                        ),
-                                                  ),
-                                                );
-                                              },
-                                        child: Text(
-                                          'Create account',
-                                          style: TextStyle(
-                                            color: AppColors.primaryColor,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    'BARBER ON YOUR TIME',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 3,
+                                    ),
                                   ),
-                                ),
-
-                                const SizedBox(height: 24),
-
-                                Text(
-                                  'BARBER ON YOUR TIME',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: AppColors.footerColor,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 3,
-                                  ),
-                                ),
-
-                                const Spacer(),
-                              ],
+                                  const Spacer(),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 }
 
-// =========================================================
-// LOGO - مع نبض خفيف مستمر
-// =========================================================
 class _AnimatedLogo extends StatefulWidget {
+  const _AnimatedLogo();
+
   @override
   State<_AnimatedLogo> createState() => _AnimatedLogoState();
 }
@@ -364,12 +376,12 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
             shape: BoxShape.circle,
             color: AppColors.cardColor,
             border: Border.all(
-              color: AppColors.primaryColor.withOpacity(0.35),
+              color: AppColors.accentColor.withOpacity(0.35),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primaryColor.withOpacity(glow),
+                color: AppColors.accentColor.withOpacity(glow),
                 blurRadius: 34,
                 spreadRadius: 3,
               ),
@@ -385,12 +397,15 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppColors.primaryColor, AppColors.primaryDark],
+            colors: [
+              AppColors.accentColor,
+              AppColors.accentColor.withOpacity(0.7),
+            ],
           ),
         ),
         child: const Icon(
           Icons.content_cut_rounded,
-          color: Colors.white,
+          color: AppColors.backgroundColor,
           size: 42,
         ),
       ),
@@ -398,10 +413,7 @@ class _AnimatedLogoState extends State<_AnimatedLogo>
   }
 }
 
-// =========================================================
-// LOGIN CARD
-// =========================================================
-class _LoginCard extends StatelessWidget {
+class _LoginCard extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController emailController;
   final TextEditingController passwordController;
@@ -409,8 +421,10 @@ class _LoginCard extends StatelessWidget {
   final VoidCallback onToggleObscure;
   final bool isLoading;
   final VoidCallback onSubmit;
+  final GlobalKey<_AnimatedSubmitButtonState> buttonKey;
 
   const _LoginCard({
+    super.key,
     required this.formKey,
     required this.emailController,
     required this.passwordController,
@@ -418,7 +432,31 @@ class _LoginCard extends StatelessWidget {
     required this.onToggleObscure,
     required this.isLoading,
     required this.onSubmit,
+    required this.buttonKey,
   });
+
+  @override
+  State<_LoginCard> createState() => _LoginCardState();
+}
+
+class _LoginCardState extends State<_LoginCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ledController;
+
+  @override
+  void initState() {
+    super.initState();
+    _ledController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 4000),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ledController.dispose();
+    super.dispose();
+  }
 
   InputDecoration _decoration({
     required String hint,
@@ -427,7 +465,7 @@ class _LoginCard extends StatelessWidget {
   }) {
     OutlineInputBorder border(Color color, [double width = 1]) =>
         OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide(color: color, width: width),
         );
 
@@ -439,9 +477,9 @@ class _LoginCard extends StatelessWidget {
       filled: true,
       fillColor: AppColors.inputColor,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
-      border: border(AppColors.borderColor),
-      enabledBorder: border(AppColors.borderColor),
-      focusedBorder: border(AppColors.primaryColor, 1.5),
+      border: border(AppColors.borderColor.withOpacity(0.5)),
+      enabledBorder: border(AppColors.borderColor.withOpacity(0.5)),
+      focusedBorder: border(AppColors.accentColor, 1.5),
       errorBorder: border(AppColors.errorColor),
       focusedErrorBorder: border(AppColors.errorColor, 1.5),
     );
@@ -449,129 +487,207 @@ class _LoginCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      width: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: AppColors.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.borderColor, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.30),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
+    return AnimatedBuilder(
+      animation: _ledController,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: _BorderBeamPainter(
+            animationValue: _ledController.value,
+            color: AppColors.accentColor,
+            borderRadius: 26.0,
           ),
-        ],
-      ),
-      child: Form(
-        key: formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Email',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
+          child: child,
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.cardColor,
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.4),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
-            const SizedBox(height: 9),
-            TextFormField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-              cursorColor: AppColors.primaryColor,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter your email';
-                }
-                if (!RegExp(
-                  r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$',
-                ).hasMatch(value.trim())) {
-                  return 'Please enter a valid email';
-                }
-                return null;
-              },
-              decoration: _decoration(
-                hint: 'Enter your email address',
-                icon: Icons.email_outlined,
+          ],
+        ),
+        child: Form(
+          key: widget.formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'البريد الإلكتروني',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Password',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+              const SizedBox(height: 9),
+              TextFormField(
+                controller: widget.emailController,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                cursorColor: AppColors.accentColor,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'يرجى إدخال البريد الإلكتروني';
+                  }
+                  if (!RegExp(
+                    r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$',
+                  ).hasMatch(value.trim())) {
+                    return 'يرجى إدخال بريد إلكتروني صالح';
+                  }
+                  return null;
+                },
+                decoration: _decoration(
+                  hint: 'أدخل بريدك الإلكتروني',
+                  icon: Icons.email_outlined,
+                ),
               ),
-            ),
-            const SizedBox(height: 9),
-            TextFormField(
-              controller: passwordController,
-              obscureText: isPasswordObscured,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) {
-                if (!isLoading) onSubmit();
-              },
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-              cursorColor: AppColors.primaryColor,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter your password';
-                }
-                if (value.length < 6) {
-                  return 'Password must be at least 6 characters';
-                }
-                return null;
-              },
-              decoration: _decoration(
-                hint: 'Enter your password',
-                icon: Icons.lock_outline,
-                suffix: IconButton(
-                  onPressed: onToggleObscure,
-                  icon: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    transitionBuilder: (child, anim) =>
-                        ScaleTransition(scale: anim, child: child),
-                    child: Icon(
-                      isPasswordObscured
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                      key: ValueKey(isPasswordObscured),
-                      color: AppColors.textSecondary,
-                      size: 21,
+              const SizedBox(height: 20),
+              Text(
+                'كلمة المرور',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 9),
+              TextFormField(
+                controller: widget.passwordController,
+                obscureText: widget.isPasswordObscured,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) {
+                  if (!widget.isLoading) widget.onSubmit();
+                },
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                cursorColor: AppColors.accentColor,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'يرجى إدخال كلمة المرور';
+                  }
+                  if (value.length < 6) {
+                    return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل';
+                  }
+                  return null;
+                },
+                decoration: _decoration(
+                  hint: 'أدخل كلمة المرور',
+                  icon: Icons.lock_outline,
+                  suffix: IconButton(
+                    onPressed: widget.onToggleObscure,
+                    icon: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      transitionBuilder: (child, anim) =>
+                          ScaleTransition(scale: anim, child: child),
+                      child: Icon(
+                        widget.isPasswordObscured
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        key: ValueKey(widget.isPasswordObscured),
+                        color: AppColors.textSecondary,
+                        size: 21,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 28),
-            _AnimatedSubmitButton(
-              isLoading: isLoading,
-              label: 'Sign In',
-              onPressed: onSubmit,
-            ),
-          ],
+              const SizedBox(height: 28),
+              _AnimatedSubmitButton(
+                key: widget.buttonKey,
+                isLoading: widget.isLoading,
+                label: 'تسجيل الدخول',
+                onPressed: widget.onSubmit,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// =========================================================
-// زر بتأثير ضغطة (scale down عند الضغط)
-// =========================================================
+// كلاس رسم مسار الضوء المتحرك على حواف الصندوق
+class _BorderBeamPainter extends CustomPainter {
+  final double animationValue;
+  final Color color;
+  final double borderRadius;
+
+  _BorderBeamPainter({
+    required this.animationValue,
+    required this.color,
+    required this.borderRadius,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rRect = RRect.fromRectAndRadius(rect, Radius.circular(borderRadius));
+
+    // رسم إطار خافت وثابت للخلفية
+    final basePaint = Paint()
+      ..color = color.withOpacity(0.15)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawRRect(rRect, basePaint);
+
+    // مسار الضوء المتحرك (Gradient Sweep)
+    final path = Path()..addRRect(rRect);
+
+    final pathMetrics = path.computeMetrics().toList();
+    if (pathMetrics.isEmpty) return;
+
+    final metric = pathMetrics.first;
+    final length = metric.length;
+
+    const beamLength = 150.0;
+    final currentPosition = animationValue * length;
+
+    final extractPath = metric.extractPath(
+      currentPosition,
+      (currentPosition + beamLength) % length,
+    );
+
+    final paint = Paint()
+      ..shader = SweepGradient(
+        colors: [Colors.transparent, color, Colors.transparent],
+        stops: const [0.0, 0.5, 1.0],
+      ).createShader(rect)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 10
+      ..strokeCap = StrokeCap.round;
+
+    if (currentPosition + beamLength > length) {
+      final extraPath = metric.extractPath(
+        0.0,
+        (currentPosition + beamLength) % length,
+      );
+      canvas.drawPath(extraPath, paint);
+    }
+
+    canvas.drawPath(extractPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BorderBeamPainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue ||
+        oldDelegate.color != color;
+  }
+}
+
 class _AnimatedSubmitButton extends StatefulWidget {
   final bool isLoading;
   final String label;
   final VoidCallback onPressed;
 
   const _AnimatedSubmitButton({
+    super.key,
     required this.isLoading,
     required this.label,
     required this.onPressed,
@@ -581,60 +697,110 @@ class _AnimatedSubmitButton extends StatefulWidget {
   State<_AnimatedSubmitButton> createState() => _AnimatedSubmitButtonState();
 }
 
-class _AnimatedSubmitButtonState extends State<_AnimatedSubmitButton> {
+class _AnimatedSubmitButtonState extends State<_AnimatedSubmitButton>
+    with TickerProviderStateMixin {
   double _scale = 1.0;
+  late final AnimationController _shakeController;
+  late final AnimationController _flashController;
+  late final Animation<double> _shakeAnimation;
+  late final Animation<Color?> _flashAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _shakeAnimation = Tween<double>(begin: 0.0, end: 10.0).animate(
+      CurvedAnimation(parent: _shakeController, curve: Curves.elasticIn),
+    );
+
+    _flashController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _flashAnimation = ColorTween(
+      begin: AppColors.accentColor,
+      end: AppColors.errorColor,
+    ).animate(_flashController);
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    _flashController.dispose();
+    super.dispose();
+  }
+
+  void shakeAndFlash() {
+    _shakeController.forward(from: 0.0);
+    _flashController.forward().then((_) {
+      _flashController.reverse();
+    });
+  }
 
   void _setScale(double value) => setState(() => _scale = value);
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: widget.isLoading ? null : (_) => _setScale(0.96),
-      onTapUp: widget.isLoading ? null : (_) => _setScale(1.0),
-      onTapCancel: widget.isLoading ? null : () => _setScale(1.0),
-      onTap: widget.isLoading ? null : widget.onPressed,
-      child: AnimatedScale(
-        scale: _scale,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        child: Container(
-          height: 56,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: widget.isLoading
-                  ? [
-                      AppColors.primaryColor.withOpacity(0.45),
-                      AppColors.primaryDark.withOpacity(0.45),
-                    ]
-                  : [AppColors.primaryColor, AppColors.primaryDark],
+    return AnimatedBuilder(
+      animation: Listenable.merge([_shakeController, _flashController]),
+      builder: (context, child) {
+        final sineValue =
+            math.sin(_shakeController.value * 4 * math.pi) *
+            (_shakeController.value < 1.0
+                ? (1.0 - _shakeController.value) * 12.0
+                : 0.0);
+
+        final currentColor = _flashAnimation.value ?? AppColors.accentColor;
+
+        return Transform.translate(
+          offset: Offset(sineValue, 0),
+          child: GestureDetector(
+            onTapDown: widget.isLoading ? null : (_) => _setScale(0.96),
+            onTapUp: widget.isLoading ? null : (_) => _setScale(1.0),
+            onTapCancel: widget.isLoading ? null : () => _setScale(1.0),
+            onTap: widget.isLoading ? null : widget.onPressed,
+            child: AnimatedScale(
+              scale: _scale,
+              duration: const Duration(milliseconds: 120),
+              curve: Curves.easeOut,
+              child: Container(
+                height: 54,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: currentColor, width: 2),
+                ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: widget.isLoading
+                      ? SizedBox(
+                          key: const ValueKey('loading'),
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: currentColor,
+                          ),
+                        )
+                      : Text(
+                          widget.label,
+                          key: const ValueKey('label'),
+                          style: TextStyle(
+                            color: currentColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
             ),
-            borderRadius: BorderRadius.circular(14),
           ),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: widget.isLoading
-                ? const SizedBox(
-                    key: ValueKey('loading'),
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: Colors.white,
-                    ),
-                  )
-                : Text(
-                    widget.label,
-                    key: const ValueKey('label'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

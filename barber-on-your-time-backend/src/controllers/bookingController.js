@@ -102,7 +102,9 @@ import {
   getStaffBookings,
   requestServiceCompletion,   // 👈 جديد
   confirmBookingCompletion,   // 👈 جديد
-  getMyStats
+  getMyStats,
+    getStaffStatsForOwner // 👈 جديد
+
 } from "../services/bookingService.js";
 export const requestBooking = asyncHandler(async (req, res) => {
   const customerId = req.user.id;
@@ -177,4 +179,12 @@ export const getStaffStats = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const stats = await getMyStats(userId);
   return successHandler(res, 200, "إحصائياتك", stats);
+});
+// للمدير: يدخل staffId بالـ URL، ويشوف إحصائيات هاد الحلاق
+export const getStaffStatsByOwner = asyncHandler(async (req, res) => {
+  const ownerId = req.user.id;
+  const { staffId } = req.params;
+
+  const stats = await getStaffStatsForOwner(ownerId, Number(staffId));
+  return successHandler(res, 200, "إحصائيات الحلاق", stats);
 });

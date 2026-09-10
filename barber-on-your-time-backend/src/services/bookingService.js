@@ -589,75 +589,67 @@ export const confirmBookingCompletion = async (staffUserId, bookingId, enteredCo
 
 
 
-// ===== 8. إحصائيات الحلاق (للـowner) =====
+// ===== 8. إحصائيات الحلاق (للحلاق نفسه + للمدير) =====
 
-// بيرجع بداية الفترة المطلوبة (بتوقيت سوريا) ونهايتها (هلق)
-const getPeriodBoundsUTC = (period) => {
+// بداية هالأسبوع (يوم الأحد) بتوقيت سوريا، لهلق
+const getThisWeekBoundsUTC = () => {
   const now = new Date();
-  const { dateStr } = extractDateTimeParts(now); // تاريخ اليوم بتوقيت سوريا
-
-  if (period === "week") {
-    // بداية الأسبوع = يوم الأحد بتوقيت سوريا
-    const todayLocalMidnight = new Date(`${dateStr}T00:00:00+03:00`);
-    const dayOfWeek = new Date(dateStr).getUTCDay(); // 0=أحد
-    const start = new Date(todayLocalMidnight.getTime() - dayOfWeek * 86400000);
-    return { start, end: now };
-  }
-
-  if (period === "month") {
-    const [y, m] = dateStr.split("-");
-    const start = new Date(`${y}-${m}-01T00:00:00+03:00`);
-    return { start, end: now };
-  }
-
-  // all — من بداية الزمن لهلق
-  return { start: new Date(0), end: now };
+  const { dateStr } = extractDateTimeParts(now);
+  const todayLocalMidnight = new Date(`${dateStr}T00:00:00+03:00`);
+  const dayOfWeek = new Date(dateStr).getUTCDay(); // 0 = أحد
+  const start = new Date(todayLocalMidnight.getTime() - dayOfWeek * 86400000);
+  return { start, end: now };
 };
 
-// بيحسب الإحصائيات الثلاثة لفترة معينة
-const calculateStatsForPeriod = async (staffId, start, end) => {
-  const completedBookings = await prisma.booking.findMany({
-    where: {
-      staffId,
-      status: "COMPLETED",
-      startTime: { gte: start, lte: end },
-    },
+// الدالة الأساسية المشتركة — بتاخد staffId وبترجع نفس الأرقام الأربعة
+const getStaffStatsCore = async (staffId) => {
+  const { start, end } = getThisWeekBoundsUTC();
+
+  // 1+2: خدمات هالأسبوع (لحساب الفلوس والساعات)
+  const weekCompleted = await prisma.booking.findMany({
+    where: { staffId, status: "COMPLETED", startTime: { gte: start, lte: end } },
     include: { service: { select: { price: true, durationMinutes: true } } },
   });
 
-  const totalServices = completedBookings.length;
-  const totalMinutesWorked = completedBookings.reduce(
-    (sum, b) => sum + b.service.durationMinutes,
-    0
-  );
-  const totalRevenue = completedBookings.reduce((sum, b) => sum + b.service.price, 0);
+  const weekRevenue = weekCompleted.reduce((sum, b) => sum + b.service.price, 0);
+  const weekMinutes = weekCompleted.reduce((sum, b) => sum + b.service.durationMinutes, 0);
+
+  // 3: عدد الخدمات المرفوضة (كل الوقت) — من جدول BookingAttempt
+  const totalRejected = await prisma.bookingAttempt.count({
+    where: { staffId, status: "REJECTED" },
+  });
+
+  // 4: عدد الخدمات المقبولة والمنجزة (كل الوقت) — من جدول Booking نفسه
+  const totalCompleted = await prisma.booking.count({
+    where: { staffId, status: "COMPLETED" },
+  });
 
   return {
-    totalServices,
-    totalMinutesWorked,
-    totalHoursWorked: Math.round((totalMinutesWorked / 60) * 100) / 100, // مقرّبة لخانتين عشريتين
-    totalRevenue,
+    thisWeek: {
+      revenue: weekRevenue,
+      hoursWorked: Math.round((weekMinutes / 60) * 100) / 100,
+    },
+    totalServicesRejected: totalRejected,
+    totalServicesCompleted: totalCompleted,
   };
 };
 
-// API الحلاق: إحصائياته الكاملة (كل الوقت + هالأسبوع + هالشهر)
+// للحلاق: يشوف إحصائياته هو (بتوكن نفسه)
 export const getMyStats = async (userId) => {
   const staff = await prisma.staff.findUnique({ where: { userId } });
   if (!staff) throw new ApiError(403, "لازم تكون حلاق لعرض الإحصائيات");
+  return await getStaffStatsCore(staff.id);
+};
 
-  const allTime = getPeriodBoundsUTC("all");
-  const thisWeek = getPeriodBoundsUTC("week");
-  const thisMonth = getPeriodBoundsUTC("month");
-
-  const [allTimeStats, weekStats, monthStats] = await Promise.all([
-    calculateStatsForPeriod(staff.id, allTime.start, allTime.end),
-    calculateStatsForPeriod(staff.id, thisWeek.start, thisWeek.end),
-    calculateStatsForPeriod(staff.id, thisMonth.start, thisMonth.end),
-  ]);
-
-  return {
-    allTime: allTimeStats,
-    thisWeek: weekStats,
-    thisMonth: monthStats,
-  };
+// للمدير: يدخل staffId ويشوف إحصائيات أي حلاق تابع لمحله
+export const getStaffStatsForOwner = async (ownerId, staffId) => {
+  const staff = await prisma.staff.findUnique({
+    where: { id: staffId },
+    include: { business: true },
+  });
+  if (!staff) throw new ApiError(404, "الحلاق مش موجود");
+  if (staff.business.ownerId !== ownerId) {
+    throw new ApiError(403, "هاد الحلاق مش تابع لمحلك");
+  }
+  return await getStaffStatsCore(staff.id);
 };

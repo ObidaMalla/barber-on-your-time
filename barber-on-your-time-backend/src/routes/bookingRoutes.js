@@ -7,7 +7,9 @@ import {
   listStaffBookings,
   requestCompletion,   // 👈 جديد
   confirmCompletion,   // 👈 جديد
-  getStaffStats
+  getStaffStats,
+  getStaffStatsByOwner // 👈 جديد
+
 } from "../controllers/bookingController.js";
 import { protect } from "../middlewares/authMiddleware.js";
 
@@ -24,5 +26,6 @@ router.post("/:bookingId/request-completion", protect, requestCompletion); // ا
 router.post("/:bookingId/complete", protect, confirmCompletion);           // الحلاق
 
 
-router.get("/my-stats", protect, getStaffStats);//احصائيات
+router.get("/my-stats", protect, getStaffStats);                    // موجود أصلاً
+router.get("/staff/:staffId/stats", protect, getStaffStatsByOwner); // 👈 جديد
 export default router;

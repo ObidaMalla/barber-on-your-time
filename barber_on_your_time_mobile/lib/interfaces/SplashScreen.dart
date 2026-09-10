@@ -84,11 +84,14 @@ class _SplashScreenState extends State<SplashScreen>
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [AppColors.primaryColor, AppColors.primaryDark],
+                  colors: [
+                    AppColors.accentColor,
+                    AppColors.accentColor.withOpacity(0.35),
+                  ],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primaryColor.withOpacity(0.35),
+                    color: AppColors.accentColor.withOpacity(0.35),
                     blurRadius: 40,
                     spreadRadius: 4,
                   ),
