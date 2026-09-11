@@ -1,3 +1,4 @@
+import 'package:barber_on_your_time/interfaces/staffStatistics/StaffStatisticsScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -51,7 +52,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     // ============================================================
 
     _pages = [
-      // OWNER - الواجهة الأولى أصبحت الخدمات بدلاً من الرئيسية
+      // OWNER
       if (widget.userRole == 'OWNER') const GetServicesScreen(),
 
       // STAFF
@@ -62,7 +63,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
       // OWNER
       if (widget.userRole == 'OWNER') const OwnerPendingRequestsScreen(),
-
       if (widget.userRole == 'OWNER') const GetStaffScreen(),
 
       // STAFF
@@ -71,10 +71,12 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
       // CUSTOMER
       if (widget.userRole == 'CUSTOMER') const BusinessesListScreen(),
-
       if (widget.userRole == 'CUSTOMER') const BusinessOnboardingScreen(),
 
-      // ALL
+      // 👈 الإحصائيات تظهر فقط للموظفين STAFF
+      if (widget.userRole == 'STAFF') const StaffStatisticsScreen(),
+
+      // ALL - PROFILE
       const ProfileScreen(),
     ];
 
@@ -83,7 +85,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     // ============================================================
 
     _navItems = [
-      // FIRST (OWNER = الخدمات)
+      // FIRST
       _NavItemData(
         icon: widget.userRole == 'OWNER'
             ? Icons.cleaning_services_rounded
@@ -121,6 +123,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       if (widget.userRole == 'CUSTOMER')
         const _NavItemData(icon: Icons.store_rounded, label: 'إنشاء محل'),
 
+      // 👈 عنصر التنقل للإحصائيات يظهر فقط للموظفين STAFF
+      if (widget.userRole == 'STAFF')
+        const _NavItemData(icon: Icons.pie_chart_rounded, label: 'الإحصائيات'),
+
       // PROFILE
       const _NavItemData(icon: Icons.person_rounded, label: 'الملف الشخصي'),
     ];
@@ -130,7 +136,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   void dispose() {
     _pageController.dispose();
     _glowController.dispose();
-
     super.dispose();
   }
 

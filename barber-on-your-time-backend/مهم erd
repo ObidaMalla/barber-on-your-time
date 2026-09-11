@@ -26,3 +26,9 @@
 ---
 
 شو رأيك بهاد التصميم؟ في شي حاب تعدله أو تضيفه قبل ما نكتبه فعلياً بملف `schema.prisma`؟
+
+refactor: simplify staff stats to weekly revenue/hours + all-time completed/rejected counts, add owner endpoint
+GET /bookings/staff/5/stats
+Authorization: Bearer ownerToken
+GET /bookings/my-stats
+Authorization: Bearer staffToken

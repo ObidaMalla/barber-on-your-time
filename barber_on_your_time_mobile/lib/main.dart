@@ -19,6 +19,7 @@ import 'cubits/bookingCubit/get_my_bookings_cubit.dart';
 import 'cubits/bookingCubit/get_staff_bookings_cubit.dart';
 import 'cubits/bookingCubit/request_completion_cubit.dart';
 import 'cubits/bookingCubit/respond_booking_cubit.dart';
+import 'cubits/bookingCubit/staff_statistics_cubit.dart';
 import 'cubits/businessCubit/business_cubit.dart';
 import 'cubits/businessCubit/business_get_all_staff_cubit.dart';
 import 'cubits/businessCubit/delete_staff_cubit.dart';
@@ -177,6 +178,9 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<NotificationsListCubit>(
           create: (_) => getIt<NotificationsListCubit>(),
+        ),
+        BlocProvider<StaffStatisticsCubit>(
+          create: (_) => getIt<StaffStatisticsCubit>(),
         ),
       ],
       child: MaterialApp(

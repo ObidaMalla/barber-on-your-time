@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
 import '../../core/constants/api_constants.dart';
+import '../../models/booking/StaffStatistics/staff_statistics_model.dart';
 import '../../models/booking/cancelBooking/cancel_booking_model.dart';
 import '../../models/booking/completeBooking/complete_booking_model.dart';
 import '../../models/booking/createBooking/create_booking_model.dart';
@@ -45,4 +46,7 @@ abstract class BookingService {
     @Path('bookingId') int bookingId,
     @Body() Map<String, dynamic> body,
   );
+
+  @GET('/bookings/my-stats')
+  Future<StaffStatisticsModel> getStaffStatistics();
 }

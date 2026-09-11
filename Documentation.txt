@@ -1,0 +1,119 @@
+# Barber On Your Time
+
+## 📱 About The Project
+شرح قصير جدًا للمشروع
+
+## ✨ Features
+- Authentication
+- Salon Management
+- Barber Management
+- Employee Invitations
+- Working Hours
+- Booking System
+- Availability Management
+- Notifications
+- Profile Management
+- Statistics
+
+## 👥 User Roles
+
+### Customer
+...
+
+### Barber
+...
+
+### Salon Owner
+...
+
+## 🏗️ Architecture
+
+Flutter
+ ├── UI
+ ├── Cubit / BLoC
+ ├── Repository
+ ├── Retrofit / Dio
+ ├── Models
+ └── Dependency Injection
+
+        ↓ REST API
+
+Node.js + Express
+        ↓
+     Prisma
+        ↓
+   PostgreSQL
+
+## 🛠️ Technologies
+
+### Frontend
+- Flutter
+- Dart
+- BLoC / Cubit
+- Retrofit
+- Dio
+- GetIt
+- Freezed
+- Firebase Messaging
+
+### Backend
+- Node.js
+- Express
+- Prisma
+- PostgreSQL
+- JWT
+- bcrypt
+
+## 🔄 Booking Flow
+
+Customer
+   ↓
+Select Salon
+   ↓
+Select Barber
+   ↓
+Select Date
+   ↓
+Select Available Time
+   ↓
+Create Booking
+   ↓
+Barber Response
+   ↓
+Accepted / Rejected
+   ↓
+Alternative Barber / Owner Intervention
+
+## 🔐 Authentication & Authorization
+
+شرح JWT
+شرح الـ roles
+شرح مين مسموح يعمل شو
+
+## 🚀 Getting Started
+
+### Backend
+
+```bash
+npm install
+...
+
+
+
+
+
+
+
+
+
+**بس انتبه:** هذا مجرد الشكل، مو المطلوب تحطه كما هو. أنا بدي أعمله **بناءً على مشروعك الحقيقي** حتى ما يكون Documentation شكلي أو فيه معلومات غير موجودة.
+
+والأحلى من هيك، ممكن نعمل **3 أشياء مع بعض**:
+
+- `README.md` احترافي للـ GitHub.
+- **Postman Collection + API Documentation** للـ Backend.
+- قسم **Architecture** فيه رسم واضح يشرح رحلة الطلب من Flutter → Repository → API → Backend → Database.
+
+وهذا برأيي رح يرفع مستوى المشروع بشكل ملحوظ، لأن لما الـ recruiter يفتح GitHub ما رح يشوف *"واحد عامل تطبيق Flutter"*؛ رح يشوف **Developer فاهم كيف يبني System كامل**.
+
+إذا بدك، بالرسالة الجاية منبلّش نعمل **README الحقيقي لمشروعك خطوة خطوة**، وأنا بسألك عن الأشياء اللي ناقصتني وبطلعلك ملف جاهز تحطه مباشرة على GitHub.
