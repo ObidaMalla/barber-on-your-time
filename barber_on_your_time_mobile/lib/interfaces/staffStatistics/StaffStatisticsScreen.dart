@@ -1,13 +1,13 @@
 import 'dart:math' as math;
 
+import 'package:barber_on_your_time/core/color/colors.dart';
+import 'package:barber_on_your_time/cubits/bookingCubit/staff_statistics_cubit.dart';
+import 'package:barber_on_your_time/cubits/results_state.dart';
+import 'package:barber_on_your_time/models/booking/staffStatistics/staff_statistics_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/color/colors.dart';
-import '../../../cubits/bookingCubit/staff_statistics_cubit.dart';
-import '../../../cubits/results_state.dart';
-import '../../../injections/bootStrap/booking/staff_statistics_injection.dart';
-import '../../../models/booking/StaffStatistics/staff_statistics_model.dart';
+import '../../injections/bootStrap/auth/login_injection.dart';
 
 class StaffStatisticsScreen extends StatefulWidget {
   const StaffStatisticsScreen({super.key});

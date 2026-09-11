@@ -1,13 +1,14 @@
+import 'package:barber_on_your_time/core/color/colors.dart';
+import 'package:barber_on_your_time/cubits/businessCubit/business_get_all_staff_cubit.dart';
+import 'package:barber_on_your_time/cubits/businessCubit/delete_staff_cubit.dart';
+import 'package:barber_on_your_time/cubits/results_state.dart';
+import 'package:barber_on_your_time/main.dart';
+import 'package:barber_on_your_time/models/deleteStaff/delete_staff_model.dart';
+import 'package:barber_on_your_time/models/getAllStaff/get_staff_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../core/color/colors.dart';
-import '../../../cubits/businessCubit/business_get_all_staff_cubit.dart';
-import '../../../cubits/businessCubit/delete_staff_cubit.dart';
-import '../../../cubits/results_state.dart';
-import '../../../main.dart';
-import '../../../models/deleteStaff/delete_staff_model.dart';
-import '../../../models/getAllStaff/get_staff_model.dart';
+import 'owner_staff_stats_screen.dart';
 
 class GetStaffScreen extends StatefulWidget {
   const GetStaffScreen({super.key});
@@ -35,11 +36,23 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
     super.dispose();
   }
 
+  void _navigateToStats(StaffData staff) {
+    if (staff.id == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OwnerStaffStatsScreen(
+          staffId: staff.id!,
+          staffName: staff.user?.name ?? 'الحلاق',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiBlocListener(
       listeners: [
-        // استماع لحالة جلب الموظفين
         BlocListener<GetStaffCubit, ResultState<GetStaffModel>>(
           bloc: _getStaffCubit,
           listener: (context, state) {
@@ -55,7 +68,6 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
             );
           },
         ),
-        // استماع لحالة طرد الموظف
         BlocListener<DeleteStaffCubit, ResultState<DeleteStaffModel>>(
           bloc: _deleteStaffCubit,
           listener: (context, state) {
@@ -93,7 +105,6 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
                     backgroundColor: Colors.green,
                   ),
                 );
-                // إعادة جلب القائمة بعد النجاح لتحديث الحالة في الواجهة
                 _getStaffCubit.fetchStaff();
               },
               error: (message) {
@@ -259,52 +270,82 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
       ),
       child: Row(
         children: [
-          // 1. زر الخيارات (أقصى اليمين) إذا كان الموظف نشطاً
+          // 1. قائمة النقاط الثلاث للخيارات
           if (isActive)
-            PopupMenuButton<String>(
-              icon: Icon(
-                Icons.more_vert_rounded,
-                color: AppColors.textSecondary,
+            Theme(
+              data: Theme.of(context).copyWith(
+                // تم ضبط لون خلفية القائمة المنسدلة إلى اللون الداكن
+                cardColor: AppColors.cardColor,
               ),
-              color: AppColors.cardColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: AppColors.accentColor.withOpacity(0.2)),
-              ),
-              onSelected: (value) {
-                if (value == 'delete') {
-                  _showDeleteConfirmationDialog(staff);
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: const [
-                      Text(
-                        'إنهاء الخدمات',
-                        style: TextStyle(
-                          color: Colors.redAccent,
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(width: 10),
-                      Icon(
-                        Icons.person_remove_rounded,
-                        color: Colors.redAccent,
-                        size: 20,
-                      ),
-                    ],
+              child: PopupMenuButton<String>(
+                color: AppColors.cardColor, // خلفية القائمة داكنة
+                icon: Icon(
+                  Icons.more_vert_rounded,
+                  color: AppColors.textPrimary, // أيقونة النقاط الثلاث بيضاء
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(
+                    color: AppColors.accentColor.withOpacity(0.3),
                   ),
                 ),
-              ],
+                onSelected: (value) {
+                  if (value == 'stats') {
+                    _navigateToStats(staff);
+                  } else if (value == 'delete') {
+                    _showDeleteConfirmationDialog(staff);
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem<String>(
+                    value: 'stats',
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          'عرض الإحصائيات',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Icon(
+                          Icons.bar_chart_rounded,
+                          color: AppColors.accentColor,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: const [
+                        Text(
+                          'إنهاء الخدمة',
+                          style: TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 13,
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Icon(
+                          Icons.person_remove_rounded,
+                          color: Colors.redAccent,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
 
-          if (isActive) const SizedBox(width: 8),
+          if (isActive) const SizedBox(width: 4),
 
-          // 2. معلومات الموظف (الاسم، البريد، وحالة منتهي الخدمة)
+          // 2. تفاصيل الموظف
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -361,7 +402,7 @@ class _GetStaffScreenState extends State<GetStaffScreen> {
           ),
           const SizedBox(width: 14),
 
-          // 3. الأيقونة الخاصة بالموظف (أقصى اليسار داخل البطاقة)
+          // 3. أيقونة الحلاق
           Container(
             width: 52,
             height: 52,

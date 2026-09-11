@@ -17,6 +17,7 @@ import 'cubits/bookingCubit/complete_booking_cubit.dart';
 import 'cubits/bookingCubit/create_booking_cubit.dart';
 import 'cubits/bookingCubit/get_my_bookings_cubit.dart';
 import 'cubits/bookingCubit/get_staff_bookings_cubit.dart';
+import 'cubits/bookingCubit/owner_staff_stats_cubit.dart';
 import 'cubits/bookingCubit/request_completion_cubit.dart';
 import 'cubits/bookingCubit/respond_booking_cubit.dart';
 import 'cubits/bookingCubit/staff_statistics_cubit.dart';
@@ -181,6 +182,10 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<StaffStatisticsCubit>(
           create: (_) => getIt<StaffStatisticsCubit>(),
+        ),
+
+        BlocProvider<OwnerStaffStatsCubit>(
+          create: (_) => getIt<OwnerStaffStatsCubit>(),
         ),
       ],
       child: MaterialApp(

@@ -1,4 +1,5 @@
-import '../../models/booking/StaffStatistics/staff_statistics_model.dart';
+import 'package:barber_on_your_time/models/booking/staffStatistics/staff_statistics_model.dart';
+
 import '../../routes/booking/booking_routes.dart';
 import '../apiExceptionHandler.dart';
 

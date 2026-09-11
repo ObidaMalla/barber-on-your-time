@@ -7,6 +7,7 @@ import 'complete_booking_injection.dart';
 import 'create_booking_injection.dart';
 import 'get_my_bookings_injection.dart';
 import 'get_staff_bookings_injection.dart';
+import 'owner_staff_stats_injection.dart';
 
 void initBookingFeature() {
   initGetItCreateBooking();
@@ -17,4 +18,5 @@ void initBookingFeature() {
   initGetItRequestCompletion();
   initGetItCompleteBooking();
   initGetItStaffStatistics();
+  initGetItOwnerStaffStats();
 }

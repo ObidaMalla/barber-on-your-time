@@ -2,14 +2,15 @@ import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
 import '../../core/constants/api_constants.dart';
-import '../../models/booking/StaffStatistics/staff_statistics_model.dart';
 import '../../models/booking/cancelBooking/cancel_booking_model.dart';
 import '../../models/booking/completeBooking/complete_booking_model.dart';
 import '../../models/booking/createBooking/create_booking_model.dart';
 import '../../models/booking/getMyBookings/get_my_bookings_model.dart';
 import '../../models/booking/getStaffBookings/get_staff_bookings_model.dart';
+import '../../models/booking/ownerStaffStats/owner_staff_stats_model.dart';
 import '../../models/booking/requestCompletion/request_completion_model.dart';
 import '../../models/booking/respondBooking/respond_booking_model.dart';
+import '../../models/booking/staffStatistics/staff_statistics_model.dart';
 
 part 'booking_routes.g.dart';
 
@@ -23,7 +24,7 @@ abstract class BookingService {
   @GET('/bookings/staff')
   Future<GetStaffBookingsModel> getStaffBookings();
 
-  //respond files
+  // respond files
   @PATCH('/bookings/{bookingId}/status')
   Future<RespondBookingModel> respondToBooking(
     @Path('bookingId') int bookingId,
@@ -49,4 +50,9 @@ abstract class BookingService {
 
   @GET('/bookings/my-stats')
   Future<StaffStatisticsModel> getStaffStatistics();
+
+  @GET('/bookings/staff/{staffId}/stats')
+  Future<OwnerStaffStatsModel> getStaffStatisticsForOwner(
+    @Path('staffId') int staffId,
+  );
 }
