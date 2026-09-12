@@ -11,14 +11,23 @@ class OwnerStaffStatsCubit extends Cubit<ResultState<OwnerStaffStatsModel>> {
     : super(const ResultState.idle());
 
   Future<void> getStaffStatisticsForOwner(int staffId) async {
+    if (isClosed) return;
     emit(const ResultState.loading());
+
     try {
       final response = await ownerStaffStatsRepo.getStaffStatisticsForOwner(
         staffId,
       );
-      emit(ResultState.success(response));
+
+      // 👈 التحقق من أن الكيوبيت ما زال يعمل قبل إرسال النتيجة
+      if (!isClosed) {
+        emit(ResultState.success(response));
+      }
     } catch (error) {
-      emit(ResultState.error(error is String ? error : error.toString()));
+      // 👈 التحقق أيضاً في حالة الخطأ
+      if (!isClosed) {
+        emit(ResultState.error(error is String ? error : error.toString()));
+      }
     }
   }
 }

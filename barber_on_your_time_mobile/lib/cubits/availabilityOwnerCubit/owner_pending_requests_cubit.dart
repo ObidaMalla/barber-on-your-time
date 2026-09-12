@@ -12,14 +12,22 @@ class OwnerPendingRequestsCubit
     : super(const ResultState.idle());
 
   Future<void> fetchPendingRequests() async {
+    if (isClosed) return;
     emit(const ResultState.loading());
+
     try {
       final response = await ownerRequestsRepo.fetchPendingRequests();
+
+      // 👈 التأكد من أن الكيوبيت لم يتم تدميره أثناء انتظار الـ Network Request
+      if (isClosed) return;
+
       debugPrint(
         '✅ [OwnerPendingRequestsCubit] Success: ${response.data?.length} pending',
       );
       emit(ResultState.success(response));
     } catch (error) {
+      if (isClosed) return;
+
       final String message = error is String ? error : error.toString();
       debugPrint('❌ [OwnerPendingRequestsCubit] $message');
       emit(ResultState.error(message));
