@@ -49,25 +49,38 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
   Color _getStatusThemeColor(String? status) {
     switch (status) {
       case 'CONFIRMED':
-        return const Color(0xFF00E676);
+        return Colors.blue;
+
+      case 'COMPLETED':
+        return Colors.green;
+
+      case 'NO_SHOW':
       case 'CANCELLED':
-      case 'REJECTED':
-        return const Color(0xFFFF5252);
+        return Colors.red;
+
       case 'PENDING':
       default:
-        return const Color(0xFFFFD700);
+        return Colors.orange;
     }
   }
 
   String _statusLabel(String? status) {
     switch (status) {
-      case 'CONFIRMED':
-        return 'مؤكد';
-      case 'CANCELLED':
-        return 'ملغى';
-      case 'REJECTED':
-        return 'مرفوض';
       case 'PENDING':
+        return 'قيد الانتظار';
+
+      case 'CONFIRMED':
+        return 'قيد التنفيذ';
+
+      case 'COMPLETED':
+        return 'مكتملة';
+
+      case 'NO_SHOW':
+        return 'عدم حضور';
+
+      case 'CANCELLED':
+        return 'ملغاة';
+
       default:
         return 'قيد الانتظار';
     }
