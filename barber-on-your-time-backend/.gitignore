@@ -1,3 +1,12 @@
+# AI Tools & Editors directories
+.agents/
+.claude/
+.cursor/
+.devin/
+
+# Project documentation files to ignore
+BarberOnYourTime - دليل شامل للمشروع.txt
+
 # Dependencies
 node_modules/
 
