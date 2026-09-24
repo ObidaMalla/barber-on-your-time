@@ -1,553 +1,210 @@
-# BarberOnYourTime - دليل شامل للمشروع
+# 💈 Barber On Your Time — Salon Booking Management System
+
+نظام حجز مواعيد لصالونات الحلاقة، بميزته الأساسية: **تحويل تلقائي للحجز** — لو الحلاق رفض طلب حجز، ينتقل تلقائيًا لأقرب حلاق بديل متوفر بنفس الوقت، بدون ما الزبون يحتاج يعيد المحاولة يدويًا.
 
 ---
 
-# الجزء الأول: شرح المشروع
+## 📋 نظرة عامة
 
-## الفكرة
-تطبيق حجز مواعيد لصالونات الحلاقة. الميزة الأساسية: **نظام تحويل تلقائي** - لو الحلاق رفض طلب حجز، ينتقل تلقائياً لأقرب حلاق تاني متوفر بنفس الوقت، بدون ما العميل يحتاج يعيد المحاولة يدوياً.
+تطبيق يربط بين ثلاثة أطراف: **صاحب صالون**، **حلاق (موظف)**، و**زبون**. كل مستخدم يسجل كـ Customer بشكل افتراضي، ويترقّى تلقائيًا لـ Owner (عند إنشاء محل) أو Staff (عند الانضمام بكود دعوة).
 
-## الستاك التقني
-- **Backend**: Node.js + Express (ES Modules)
-- **ORM**: Prisma 7.9.1 (⚠️ لا تحدّث لنسخة 8، لسا تجريبية/rc)
-- **Database**: PostgreSQL
-- **Auth**: JWT (jsonwebtoken) + bcrypt للتشفير
-- **Frontend**: Flutter (لسا ما بلشنا فيه)
-
-## بنية المجلدات
-```
-src/
-  config/        → إعداد Prisma Client (Singleton مع PrismaPg adapter)
-  controllers/   → استقبال الطلب، تحقق أساسي، نداء الـ Service، إرجاع الرد
-  services/      → كل منطق العمل الحقيقي (Prisma queries, transactions)
-  routes/        → تعريف الـ endpoints وربطها بالـ Controllers
-  middlewares/   → authMiddleware.js (التحقق من JWT)
-  handlers/      → errorHandler.js + successHandler.js (شكل موحد للردود)
-  utils/         → ApiError, ApiResponse, asyncHandler
-```
-
-## نمط الكود المتبع
-- **Controller خفيف**: بس يتحقق البيانات الأساسية من `req.body`، وينادي الـ Service
-- **Service فيه كل المنطق**: يتعامل مباشرة مع Prisma، يطبّق قواعد العمل
-- **الأخطاء**: `throw new ApiError(statusCode, message)` بدل `res.status().json()` المباشر
-- **كل Controller ملفوف بـ `asyncHandler`** (بدل تكرار try/catch)
-- **الردود الناجحة**: عبر `successHandler(res, statusCode, message, data)`
-- **⚠️ قاعدة أمان مهمة**: أي مكان بنجيب فيه بيانات `User` مرتبطة (عبر `include`)، نستخدم `select` محدد بدل `include: { user: true }` حتى ما يتسرب الـ `password` (حتى المشفر) بالرد
-
-## المستخدمون الثلاثة
-| النوع | الصلاحيات |
+### الأدوار الثلاثة
+| الدور | الصلاحيات |
 |---|---|
-| **OWNER** (صاحب محل) | ينشئ محل، يضيف خدمات، يولّد أكواد دعوة للحلاقين، يطرد موظفين، يوافق/يرفض طلبات تعديل الدوام |
-| **STAFF** (حلاق) | ينضم بكود دعوة، يحدد دوامه، يوافق/يرفض حجوزات، يطلب تعديل/حذف دوامه |
-| **CUSTOMER** (عميل) | يحجز خدمة مع حلاق معين، يشوف حجوزاته، يلغي حجز |
+| **Customer (زبون)** | يحجز خدمة مع حلاق معين، يشوف حجوزاته، يلغي حجز |
+| **Staff (حلاق)** | ينضم بكود دعوة، يحدد دوامه، يوافق/يرفض الحجوزات، يطلب تعديل دوامه |
+| **Salon Owner (صاحب صالون)** | ينشئ محل، يضيف خدمات، يولّد أكواد دعوة للحلاقين، يطرد موظفين، يوافق/يرفض طلبات تعديل الدوام |
 
-كل مستخدم يسجل كـ CUSTOMER افتراضياً، وبيترقّى لـ OWNER (عند إنشاء محل) أو STAFF (عند الانضمام بكود) تلقائياً.
+---
 
-## الجداول (Database Schema)
+## ✨ أبرز الميزات التقنية
+
+- **تحويل تلقائي للحجز (Automatic Booking Reassignment)** — عند رفض الحلاق للحجز، يبحث النظام عن حلاق بديل متوفر بنفس الوقت تلقائيًا، ويتجاهل كل الحلاقين المجرَّبين سابقًا لنفس الحجز
+- **نظام تأكيد اكتمال الخدمة بكود تحقق (Completion Code)** — عند قبول الحجز، يتولّد كود عشوائي يوصل للزبون، ولازم الحلاق يدخله بعد انتهاء الموعد فعليًا حتى يتحول الحجز لـ COMPLETED؛ هيك ما فيه لا الزبون يقدر يقفل حجز بدون ما ياخد الخدمة، ولا الحلاق يقدر يقفله بدون تأكيد حضور الزبون
+- **نظام موافقة على تعديلات الدوام** — أي تغيير (إضافة أو حذف) بجدول دوام الحلاق لازم يمر بموافقة صاحب الصالون قبل ما ينفّذ فعليًا
+- **Soft Delete للموظفين** — الحلاق المطرود ما بينحذف فعليًا من قاعدة البيانات (حفاظًا على السجل التاريخي للحجوزات)، بس بيتعطّل (`active: false`)
+- **حماية صارمة من تسريب بيانات المستخدم** — أي استعلام بيرجع بيانات مرتبطة بـ `User` (زي الحلاق أو العميل بحجز)، بيستخدم `select` محدد بدل `include` الكامل، حتى ولو الحقل المشفر (`password`) ما يترجع أبدًا بأي رد
+- **معاملات ذرية (`$transaction`)** بكل عملية فيها أكتر من تغيير مترابط (إنشاء محل + ترقية owner، انضمام حلاق + تحديث كود الدعوة + ترقية role...) لضمان تناسق البيانات حتى لو صار خطأ بالمنتصف
+- **Blacklisted Tokens** لتسجيل خروج آمن رغم طبيعة JWT الـ Stateless
+- **فحص أوقات الفراغ (Free Slots)** — endpoint مخصص يحسب الأوقات المتاحة فعليًا عند كل حلاق ضمن دوامه، مع أخذ فترة استراحة 5 دقائق بعد كل حجز بعين الاعتبار
+
+---
+
+## 🛠️ التقنيات المستخدمة
+
+**Backend:**
+- Node.js + Express.js (ES Modules)
+- PostgreSQL + Prisma ORM
+- JWT (jsonwebtoken) + bcrypt
+
+**Frontend:**
+- Flutter + Dart
+- BLoC / Cubit لإدارة الحالة
+- Retrofit + Dio للاتصال بالـ API
+- GetIt لحقن التبعيات
+- Freezed
+- Firebase Messaging (إشعارات Push)
+
+---
+
+## 🏗️ المعمارية
+
+```
+Flutter
+ ├── UI
+ ├── Cubit / BLoC
+ ├── Repository
+ ├── Retrofit / Dio
+ ├── Models
+ └── Dependency Injection
+        │
+        ▼  REST API
+Node.js + Express
+ ├── Routes
+ ├── Middlewares (auth)
+ ├── Controllers (خفيفة — تحقق أساسي فقط)
+ └── Services (كل منطق العمل الحقيقي)
+        │
+        ▼
+     Prisma ORM
+        │
+        ▼
+   PostgreSQL
+```
+
+**نمط الكود:** Controller خفيف (يتحقق من صحة الطلب وينادي الـ Service) + Service فيه كل منطق العمل الفعلي والتعامل المباشر مع قاعدة البيانات. الأخطاء تُرمى عبر `ApiError` موحّد بدل تكرار `res.status().json()` بكل مكان، وكل Controller ملفوف بـ `asyncHandler` لتفادي تكرار try/catch.
+
+---
+
+## 🔄 دورة حياة الحجز
+
+```
+الزبون يطلب حجز مع حلاق معين بوقت محدد
+        │
+        ▼
+   PENDING (أول BookingAttempt)
+        │
+   ┌────┴────┐
+   ▼         ▼
+ACCEPT    REJECT
+   │         │
+   ▼         ▼
+CONFIRMED   البحث عن حلاق بديل متوفر بنفس الوقت
+   │         │ (يستثني كل الحلاقين المجرَّبين سابقًا)
+   │      ┌──┴──┐
+   │      ▼     ▼
+   │   وُجد   ما وُجد
+   │      │     │
+   │      ▼     ▼
+   │  محاولة   NEEDS_OWNER
+   │  جديدة
+   │
+   ▼ (بعد الموعد)
+الزبون يضغط "استلمت الخدمة" ──> إشعار تذكير للحلاق بكود التحقق
+        │
+        ▼
+الحلاق يُدخل الكود الصحيح ──> COMPLETED
+```
+
+> **نفس منطق البحث عن حلاق بديل** بينفّذ تلقائيًا أيضًا لما صاحب الصالون **يطرد موظف** وعندو حجوزات PENDING معلّقة.
+
+---
+
+## 🗄️ الجداول الأساسية (Database Schema)
 
 | الجدول | الوصف |
 |---|---|
-| `User` | id, name, email, password (مشفر), role, createdAt |
-| `Business` | id, name, address, ownerId (فريد - محل واحد لكل owner) |
-| `Staff` | id, active (Soft Delete), userId (فريد), businessId |
-| `Service` | id, name, durationMinutes, price, businessId |
-| `StaffInvite` | id, code (فريد), businessId, used, usedByUserId |
-| `Booking` | id, startTime, status, customerId, serviceId, staffId |
-| `BookingAttempt` | id, order, status, bookingId, staffId, respondedAt |
-| `Availability` | id, dayOfWeek (0-6), startTime, endTime (نص "HH:MM"), staffId |
-| `AvailabilityChangeRequest` | id, type (ADD/DELETE), dayOfWeek, startTime, endTime, status, staffId, availabilityId |
-| `BlacklistedToken` | id, token, expiresAt (لدعم Logout حقيقي) |
-
-## أهم منطق بالمشروع: دورة حياة الحجز
-
-1. العميل يحجز خدمة مع حلاق معين بوقت محدد → `Booking` بحالة `PENDING` + `BookingAttempt` أولى (order: 1)
-2. الحلاق يوافق → `Booking` تصير `CONFIRMED`، `BookingAttempt` تصير `ACCEPTED`
-3. الحلاق يرفض → `BookingAttempt` تصير `REJECTED`، والنظام يدور على حلاق بديل عبر `findAvailableStaff`:
-   - يتحقق من `Availability` (هل عندو دوام بهاد اليوم/الوقت)
-   - يتحقق ما عندوش حجز `CONFIRMED` تاني بنفس الوقت بالضبط (تعارض)
-   - يستثني كل الحلاقين المجربين من قبل (`excludedStaffIds`)
-4. لو لقى بديل → `BookingAttempt` جديدة (order+1) + تحديث `staffId` بالـ Booking
-5. لو محدا متوفر → `Booking` تصير `NEEDS_OWNER`
-
-نفس هاد المنطق بالضبط بينفّذ تلقائياً لما صاحب المحل **يطرد موظف** وعندو حجوزات PENDING معلقة.
-
-## قرارات تصميم مهمة (ليش هيك)
-- **Soft Delete للـ Staff** (`active: false`) مش حذف فعلي - لأنه الحذف الحقيقي بيصطدم بقيود قاعدة البيانات مع `BookingAttempt` التاريخية، وبيخسر التاريخ
-- **كود دعوة يستخدم مرة وحدة بس** - كل حلاق ياخد كود مختلف من صاحب المحل (مش كود ثابت للمحل)
-- **تعديل/حذف الدوام يمر بموافقة صاحب المحل** - نفس فلسفة أي تغيير بجدول الحلاق لازم يوافق عليه المدير
-- **حماية الأدوار**: OWNER ما بيقدر ينضم كـ Staff، وSTAFF ما بيقدر ينشئ محل (فحوصات صريحة بالـ Services)
-- **`$transaction` بكل عملية فيها أكتر من تغيير مترابط** (مثلاً: إنشاء محل + ترقية OWNER، أو انضمام + تحديث كود + ترقية STAFF) - حتى ما تصير بيانات متناقضة لو صار خطأ بالمنتصف
-
-## نشر المشروع (خبرة سابقة من TaskFlow، لما نوصلها)
-- منصة: Render (Free tier)
-- Backend كـ Web Service + PostgreSQL منفصل
-- Build Command: `npm install && npx prisma generate && npx prisma migrate deploy`
-- Start Command: `npm start`
-- استخدام Internal Database URL (مش External) بين خدمات Render
-- ⚠️ القاعدة المجانية إلها تاريخ انتهاء (~شهر)، والباك إند بينام بعد 15 دقيقة عدم استخدام
+| `User` | كل مستخدم بالنظام (id, name, email, password مشفّر, role, createdAt) |
+| `Business` | الصالون (مرتبط بصاحبه عبر `ownerId` الفريد — صالون واحد لكل owner) |
+| `Staff` | علاقة (User ↔ Business) — بيانات عمل الحلاق (`active` لدعم Soft Delete) |
+| `Service` | الخدمات المقدَّمة بالصالون (الاسم، المدة، السعر) |
+| `StaffInvite` | أكواد دعوة الحلاقين (فريدة، استخدام مرة واحدة) |
+| `Booking` | الحجز نفسه (الوقت، الحالة، العميل، الخدمة، الحلاق) |
+| `BookingAttempt` | سجل كل محاولة تحويل للحجز بين الحلاقين (الترتيب، الحالة، وقت الرد) |
+| `Availability` | دوام كل حلاق (يوم الأسبوع، وقت البداية والنهاية) |
+| `AvailabilityChangeRequest` | طلبات تعديل/حذف الدوام بانتظار موافقة صاحب الصالون |
+| `BlacklistedToken` | قائمة التوكنات الملغاة (لدعم تسجيل خروج حقيقي) |
 
 ---
 
-# الجزء الثاني: قائمة اختبار كاملة لكل الـ APIs
+## 📡 أبرز الـ API Endpoints
 
-> ملاحظة: `protect` تعني الـ endpoint محمي، لازم Header `Authorization: Bearer <token>`
+### Auth
+| Method | Endpoint | الوصف |
+|---|---|---|
+| `POST` | `/auth/register` | تسجيل حساب جديد (role = CUSTOMER افتراضيًا) |
+| `POST` | `/auth/login` | تسجيل الدخول |
+| `POST` | `/auth/logout` | تسجيل خروج (Blacklist للتوكن) |
 
-## 1. Auth (`/auth`)
+### Business (Owner)
+| Method | Endpoint | الوصف |
+|---|---|---|
+| `POST` | `/business` | إنشاء صالون (يترقّى المستخدم لـ OWNER) |
+| `POST` | `/business/staff-invites` | توليد كود دعوة لحلاق جديد |
+| `POST` | `/business/join` | انضمام حلاق بكود دعوة (يترقّى لـ STAFF) |
+| `DELETE` | `/business/staff/:staffId` | طرد موظف (Soft Delete + تحويل حجوزاته المعلّقة) |
 
-### تسجيل حساب جديد
-```
-POST /auth/register
-```
-Body:
-```json
-{ "name": "Ahmad", "email": "ahmad@test.com", "password": "123456" }
-```
-Response: `201` - بيانات المستخدم (بدون password)، role = CUSTOMER افتراضياً
+### Services
+| Method | Endpoint | الوصف |
+|---|---|---|
+| `GET/POST/PATCH/DELETE` | `/services` `/services/:id` | إدارة خدمات الصالون (Owner) |
 
-### تسجيل دخول
-```
-POST /auth/login
-```
-Body:
-```json
-{ "email": "ahmad@test.com", "password": "123456" }
-```
-Response: `200` - `{ token, user }`
+### Availability
+| Method | Endpoint | الوصف |
+|---|---|---|
+| `POST` | `/availability` | تحديد دوام مباشر (Staff) |
+| `GET` | `/availability/staff/:id/free-slots` | عرض أوقات الفراغ المتاحة عند حلاق معيّن |
+| `POST` | `/availability/requests` `/requests/delete` | طلب إضافة/حذف دوام (بانتظار موافقة) |
+| `PATCH` | `/availability/requests/:id` | موافقة/رفض صاحب الصالون على الطلب |
 
-### تسجيل خروج 🔒
-```
-POST /auth/logout
-```
-Response: `200` - التوكن ينضاف لقائمة سوداء (`BlacklistedToken`)، وما ينفع يستخدم بعدها حتى لو مدته لسا صالحة
-
----
-
-## 2. Users (`/users`)
-
-### عرض بياناتي 🔒
-```
-GET /users/me
-```
-Response: `200` - id, name, email, role, createdAt
-
-### تعديل الاسم/الإيميل 🔒
-```
-PATCH /users/me
-```
-Body (حقل أو أكتر، مش لازم الكل):
-```json
-{ "name": "اسم جديد", "email": "new@test.com" }
-```
-
-### تعديل الباسورد 🔒
-```
-PATCH /users/me/password
-```
-Body:
-```json
-{ "oldPassword": "123456", "newPassword": "654321" }
-```
-ملاحظة: لازم الباسورد القديم صحيح، وإلا `401`
+### Bookings
+| Method | Endpoint | الوصف |
+|---|---|---|
+| `POST` | `/bookings` | طلب حجز جديد (Customer) |
+| `PATCH` | `/bookings/:id/status` | رد الحلاق (ACCEPT / REJECT) |
+| `POST` | `/bookings/:id/request-completion` | الزبون يبلّغ إنه استلم الخدمة |
+| `POST` | `/bookings/:id/complete` | الحلاق يؤكد الاكتمال بإدخال الكود |
+| `GET` | `/bookings/mine` `/bookings/staff` | عرض الحجوزات (لكل دور حسب صلاحيته) |
+| `DELETE` | `/bookings/:id` | إلغاء حجز (Customer) |
+| `GET` | `/bookings/my-stats` `/bookings/staff/:id/stats` | إحصائيات الحلاق (أسبوعية + إجمالية) |
 
 ---
 
-## 3. Business (`/business`)
+## 🔐 الأمان والصلاحيات
 
-### إنشاء محل 🔒
-```
-POST /business
-```
-Body:
-```json
-{ "name": "محل الحلاقة", "address": "دمشق" }
-```
-Response: `201` - يترقّى المستخدم تلقائياً لـ OWNER (عبر `$transaction`)
-- مرفوض لو عنده محل أصلاً (`409`) أو لو role تبعه STAFF (`403`)
-
-### توليد كود دعوة لحلاق 🔒 (owner بس)
-```
-POST /business/staff-invites
-```
-Response: `201` - `{ code: "XXXXXXXX" }` (كود عشوائي 8 خانات، استخدام مرة وحدة)
-
-### الانضمام كموظف بكود 🔒
-```
-POST /business/join
-```
-Body:
-```json
-{ "code": "XXXXXXXX" }
-```
-Response: `200` - ينضاف كـ Staff، يترقّى لـ STAFF تلقائياً
-- مرفوض لو الكود غلط (`404`)، مستخدم من قبل (`409`)، المستخدم OWNER (`403`)، أو أصلاً Staff فعّال بمحل (`409`)
-- لو عنده سجل Staff قديم معطّل (مطرود سابقاً)، بيتفعّل من جديد بدل إنشاء سجل جديد
-
-### طرد موظف 🔒 (owner بس)
-```
-DELETE /business/staff/:staffId
-```
-Response: `200` - الموظف يصير `active: false`، role يرجع CUSTOMER
-- أي حجز PENDING تبعه وقت الطرد ينتقل تلقائياً لحلاق بديل (نفس منطق الرفض)، أو NEEDS_OWNER لو محدا متوفر
+- مصادقة عبر **JWT** — كل endpoint محمي يتطلب `Authorization: Bearer <token>`
+- فحوصات صريحة تمنع تعارض الأدوار: **Owner ما بيقدر ينضم كـ Staff**، و**Staff ما بيقدر ينشئ صالون**
+- تسجيل خروج حقيقي عبر **Blacklisted Tokens** بدل الاعتماد فقط على انتهاء صلاحية التوكن
 
 ---
 
-## 4. Services (`/services`)
+## 🚀 التشغيل محليًا
 
-### إضافة خدمة 🔒 (owner بس)
-```
-POST /services
-```
-Body:
-```json
-{ "name": "قص شعر", "durationMinutes": 30, "price": 15 }
-```
+```bash
+# 1. استنساخ المشروع
+git clone https://github.com/ObidaMalla/barber-on-your-time.git
+cd barber-on-your-time
 
-### عرض خدمات محلي 🔒
-```
-GET /services
-```
-Response: `200` - قائمة كل خدمات المحل
+# 2. تثبيت الحزم
+npm install
 
-### تعديل خدمة 🔒 (owner بس)
-```
-PATCH /services/:serviceId
-```
-Body:
-```json
-{ "name": "قص شعر VIP", "durationMinutes": 30, "price": 20 }
-```
+# 3. إعداد متغيرات البيئة
+cp .env.example .env
+# ثم عبّي القيم المطلوبة (JWT_SECRET, DATABASE_URL, إلخ)
 
-### حذف خدمة 🔒 (owner بس)
+# 4. تطبيق الـ Migrations
+npx prisma generate
+npx prisma migrate deploy
+
+# 5. تشغيل السيرفر
+npm start
 ```
-DELETE /services/:serviceId
-```
-Response: `200` أو `409` لو في حجوزات PENDING/NEEDS_OWNER معلقة عليها
 
 ---
 
-## 5. Availability (`/availability`)
+## 👤 المطوّر
 
-### تحديد دوام مباشر 🔒 (staff)
-```
-POST /availability
-```
-Body:
-```json
-{ "dayOfWeek": 1, "startTime": "09:00", "endTime": "17:00" }
-```
-ملاحظة: `dayOfWeek` من 0 (أحد) لـ 6 (سبت)، حسب `getUTCDay()`
+**عبيده عبد الفتاح مللا**
+Full Stack Developer | Flutter & Node.js
 
-### عرض دوامي 🔒 (staff)
-```
-GET /availability
-```
-
-### طلب إضافة/تعديل دوام (بموافقة المدير) 🔒 (staff)
-```
-POST /availability/requests
-```
-Body:
-```json
-{ "dayOfWeek": 2, "startTime": "10:00", "endTime": "16:00" }
-```
-Response: `201` - ينشئ `AvailabilityChangeRequest` بحالة PENDING (type: ADD)، ما بيلمس الجدول الحقيقي لحد الموافقة
-
-
-
-
-
-
-### طلب حذف دوام (بموافقة المدير) 🔒 (staff)
-```
-POST /availability/requests/delete
-```
-Body:
-```json
-  { "availabilityId": 1 }
-```
-Response: `201` - نفس فكرة الطلب فوق، بس type: DELETE
-
-
-
-****************************************************************************
-
-### عرض الطلبات المعلقة 🔒 (owner بس)
-```
-GET /availability/requests
-```
-Response: قائمة الطلبات PENDING تبع محله، مع اسم الحلاق (بدون password)
-
-### الرد على طلب 🔒 (owner بس)
-```
-PATCH /availability/requests/:requestId
-```
-Body:
-```json
-{ "decision": "APPROVE" }
-```
-أو
-```json
-{ "decision": "REJECT" }
-```
-لو APPROVE: ينفّذ التغيير فعلياً (ينشئ Availability جديد لو ADD، أو يحذف السطر لو DELETE) - عبر `$transaction`
-
----
-
-
-
-****************************************************************
-
-
-## 6. Bookings (`/bookings`)
-
-### طلب حجز جديد 🔒 (customer)
-```
-POST /bookings
-```
-Body:
-```json
-{ "serviceId": 1, "staffId": 1, "startTime": "2026-08-31T10:00:00.000Z" }
-```
-Response: `201` - status: PENDING، أول BookingAttempt (order: 1)
-- مرفوض (`409`) لو عندك طلب معلق أصلاً لنفس الوقت/الحلاق
-
-
-
-//////////////////////////////////////////////////////////
-http://localhost:3000/bookings/staff
-الحلاق يعرف حجوزاتو 
-get
-
-///////////////////////////////********************************///////////////////
-### رد الحلاق على الحجز 🔒 (staff)
-```
-PATCH /bookings/:bookingId/status
-```
-Body:
-```json
-{ "decision": "ACCEPT" }
-```
-أو
-```json
-{ "decision": "REJECT" }
-```
-- ACCEPT: status → CONFIRMED
-- REJECT: يدور على حلاق بديل تلقائياً، أو NEEDS_OWNER لو محدا متوفر
-
-///////////////////////////////////////////*****************//////////////////////////////************
-### عرض حجوزاتي 🔒 (customer)
-```
-GET /bookings/mine
-```
-Response: قائمة حجوزات العميل مع بيانات الخدمة والحلاق (بدون password)، مرتبة الأحدث أول
-
-
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////*****
-### إلغاء حجز 🔒 (customer)
-```
-DELETE /bookings/:bookingId
-```
-Response: `200` - status → CANCELLED (يشتغل حتى لو الحجز CONFIRMED)
-
----
-
-## سيناريو اختبار شامل مقترح (بالترتيب)
-
-1. Register + Login لـ Owner
-2. Owner ينشئ محل + يضيف خدمة
-3. Owner يولّد كودين دعوة
-4. Register + Login لحلاقين (Ahmad, Khaled)، كل واحد ينضم بكود، يحدد دوامه (نفس اليوم)
-5. Register + Login لعميل
-6. العميل يحجز مع Ahmad
-7. Ahmad يرفض → تأكد الحجز انتقل لـ Khaled تلقائياً
-8. Khaled يوافق → تأكد الحالة صارت CONFIRMED
-9. جرب: Owner يطرد حلاق وعندو حجز PENDING → تأكد التحويل صار
-10. جرب: طلب تعديل دوام → موافقة → تأكد التنفيذ الفعلي
-11. جرب: طلب حذف دوام → موافقة → تأكد الحذف الفعلي
-12. العميل يلغي حجز
-13. تسجيل خروج، وتأكد نفس التوكن مرفوض بعدها
-
----
-
-*باقي على الخطة: نظام الإشعارات (Notifications) - آخر خطوة قبل النشر على Render*
-
-
-
-
-
-
-
-
-
-
-
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:3000 tcp:3000
-
-
-
-
-انا رفعت التعديل عملت push ب render عملت deploy last commit
-كلو اشتغل هلق في api انا نسيانو كليا نسيان اعملو 
-شو هو 
-في حلاق مثلا اسمو عمران هاد عمران عندو يوم السبت دوام عجقة وكتير حجوزات من 8 الصبح ل 9 المسا كلو حجوزات بس في وقت فاضي الساعة 5ونص 
-انا زبون اجيت اعمل طلب حجز 
-طلعلي هي 
-
-```javascript
-  if (!isAvailable) {
-    throw new ApiError(409, "هاد الوقت غير متاح عند هاد الحلاق او لا يمتلك الدوام بهذا اليوم، جرب وقت تاني");
-  }
-هو صح طيب انا ك زبون جربت بغير وقت طلعتلي نفس القصة جربت مرة تالتة مثلا مثلا طلعت نفس القصة انا ك مستخدم بقرف التطبيق وبحذفو بقول مو شغال  ما بعرف انو عنجد هاد الحلاق عندو زباين غيري ف api هو عرض عرض فقط لا غير للوقت المتاح للحلاق احمد ضمن يوم بدوامو طبعا 
-مشان انا اعرف شو الوقت الفاضي عندو واحجز على اساسو طبعا بدنا ناخد بعين الاعتبار ال 5 دقايق الاستراحة يلي بتكون له بعد كل حجز 
-
-طيب وapi تاني للحاق بس عرض اوقات الفراغ لديه يعني مشان ما يلتهي ويعرف انو في الزبون يلي اسمو كذا عندو هاد الوقت بس عرض شو بدك ابعتلك لابعتلك اصلا غالبا كل الأمو معك
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-مهم
-/////////////////////////////////////////
-فهمي للسيناريو (صححلي لو في نقطة غلط)
-الحلاق يقبل الحجز (ACCEPT) → النظام يولّد كود تأكيد عشوائي (مثلاً 6 أرقام) ويخزنو مربوط بالحجز.
-الزبون يوصلو إشعار فيه الكود + رسالة "احتفظ فيه".
-الكود كمان يظهر بشاشة "حجوزاتي" (مش بس بالإشعار) — عشان لو الزبون نسي/مسح الإشعار يقدر يرجعلو من هون.
-وقت ما الزبون يستلم الخدمة فعلياً، بضغط زر "تم استلام الخدمة" — هاد الزر ما بكمل العملية مباشرة، إنما بس بيبعت إشعار تذكير للحلاق فيه نفس الكود (تذكير إلو انو الزبون قاعد قدامه وجاهز للتأكيد).
-الحلاق ياخد الكود شفهياً من الزبون (أو من الإشعار يلي وصلو)، ويدخلو بالتطبيق بشاشة عندو.
-لو الكود مطابق → الحجز يتحول لـ COMPLETED، ويوصل إشعار للزبون "تم تأكيد اكتمال الخدمة".
-
-هاد التصميم منطقي كتير لأنو الحلاق هو يلي بيقفل العملية، مش الزبون لحاله (وإلا أي زبون كان يقدر يضغط الزر ويقفل الحجز بدون ما ياخد الخدمة فعلياً — والعكس صحيح، منع الحلاق من قفل حجز بدون ما الزبون يعطيه الكود فعلياً يعني أكد حضوره).
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1. تسجيل دخول الزبون
-POST https://barber-on-your-time.onrender.com/auth/login
-Body (JSON): { "email": "...", "password": "..." }
-
-احفظ الـ token من الرد → سمّيه customerToken.
-
-2. تسجيل دخول الحلاق
-POST https://barber-on-your-time.onrender.com/auth/login
-Body (JSON): { "email": "...", "password": "..." }
-
-احفظ الـ token → سمّيه staffToken.
-
-3. الزبون يعمل حجز جديد
-POST https://barber-on-your-time.onrender.com/bookings
-Authorization: Bearer customerToken
-Body (JSON):
-{
-  "serviceId": 2,
-  "staffId": 3,
-  "startTime": "2026-09-08T09:00:00.000Z"
-}
-
-⚠️ استخدم وقت ضمن فراغ حقيقي عند هاد الحلاق (رجّع شوف نتيجة GET /availability/staff/3/free-slots).
-
-من الرد، احفظ data.id → هاد هو الـ bookingId يلي رح نستخدمه بكل الخطوات الجاية. سمّيه مثلاً 7 بالأمثلة تحت (بدّلو برقمك الحقيقي).
-
-4. الحلاق يقبل الحجز
-PATCH https://barber-on-your-time.onrender.com/bookings/7/status
-Authorization: Bearer staffToken
-Body (JSON): { "decision": "ACCEPT" }
-
-من الإشعارات (GET /notifications بتوكن الزبون)، احفظ الكود يلي وصل بإشعار "كود تأكيد الخدمة".
-
-5. جرّب تأكيد قبل الموعد (لازم ينرفض)
-POST https://barber-on-your-time.onrender.com/bookings/7/complete
-Authorization: Bearer staffToken
-Body (JSON): { "code": "546581" }
-
-متوقع: 400 "لسا بدري" (إذا وقت الموعد لسا ما اجا).
-
-6. الزبون يضغط "استلمت الخدمة"
-POST https://barber-on-your-time.onrender.com/bookings/7/request-completion
-Authorization: Bearer customerToken
-Body: بدون (خليه none)
-
-متوقع: 200 "تم تنبيه الحلاق"، وبيوصل إشعار جديد للحلاق فيه الكود.
-
-7. تأكد الإشعار وصل للحلاق
-GET https://barber-on-your-time.onrender.com/notifications
-Authorization: Bearer staffToken
-
-متوقع: شوف إشعار جديد نوعو BOOKING_COMPLETION_REQUESTED.
-
-8. الحلاق يدخل الكود الصحيح (بعد ما يوصل وقت الموعد)
-POST https://barber-on-your-time.onrender.com/bookings/7/complete
-Authorization: Bearer staffToken
-Body (JSON): { "code": "546581" }
-
-متوقع: 200، الحجز يصير COMPLETED.
-
-9. تأكد الحالة تغيرت فعلاً
-GET https://barber-on-your-time.onrender.com/bookings/my
-Authorization: Bearer customerToken
-
-متوقع: الحجز رقم 7 حالتو COMPLETED.
-
-
-
-
-
-ممتاز، خلص كل شي بنجاح ✅ - Prisma اتفعّل، وانشأ ملفات جديدة بالمشروع.
-
-```
-
-قلي إذا موجودين أو محتاجين إضافة.
-
----
-
-## هلق منروح مباشرة لتصميم الجداول 🎯
-
-بما إنه اتفق معك سابقاً عندنا:
-- **3 أنواع مستخدمين:** صاحب محل (Owner) + حلاق (Staff) + عميل (Customer)
-- **محل واحد بس نوعه "حلاقين"**
-- **دورة حجز فيها تحويل تلقائي بين الحلاقين**
-
-خليني أعرض عليك تصميم مبدئي للجداول، وبنراجعه سوا:تمام، خلينا نشوف الصورة الكاملة للجداول قبل ما نكتبهم كود. رح أرسملك المخطط (ERD) حتى تشوف الجداول والعلاقات بينها بصرياً، وبعدها منشرح كل جدول ليش هو موجود.## خلينا نشرح كل جدول ليش موجود وشو بيمثل
-
-- **USER**: كل مستخدم بالنظام (عميل، حلاق، أو مالك) - بيحمل نوعه بعمود `role`
-- **BUSINESS**: المحل نفسه، مرتبط بصاحبه (`ownerId`)
-- **STAFF**: يمثل "حلاق شغال بمحل معين" - ليش جدول منفصل عن USER؟ لأنه نفس الشخص (User) ممكن يكون حلاق، بس بيانات شغله (أي محل، جدول دوامه) لازم تنحفظ لحالها
-- **SERVICE**: الخدمات يلي المحل بيقدمها (قص شعر، ذقن...) مع السعر والمدة
-- **BOOKING**: الحجز نفسه - مين حجز، أي خدمة، مع أي حلاق، وشو حالته (Pending/Confirmed/...)
-- **BOOKING_ATTEMPT**: هاد الجدول الأهم لفكرتك - كل مرة الطلب يروح لحلاق وبيرفض، بنسجل "محاولة" جديدة هون، حتى نعرف مين رفض ومين الدور جاي عليه
-- **AVAILABILITY**: أوقات دوام كل حلاق (يوم بالأسبوع + وقت البداية والنهاية)
-
----
-
-شو رأيك بهاد التصميم؟ في شي حاب تعدله أو تضيفه قبل ما نكتبه فعلياً بملف `schema.prisma`؟
-
-refactor: simplify staff stats to weekly revenue/hours + all-time completed/rejected counts, add owner endpoint
-GET /bookings/staff/5/stats
-Authorization: Bearer ownerToken
-GET /bookings/my-stats
-Authorization: Bearer staffToken
+📧 obidamalla@gmail.com | 📱 +963 981 674 273
